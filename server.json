@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.nandhakishorm/rl-sales-augment",
+  "description": "Trained RL sales policy as MCP tools: given the buyer's perceived state, next_move returns the strategic move (rapport, pitch, objection, discount, close). Your LLM writes the words; the policy supplies the timing.",
+  "version": "0.3.0",
+  "websiteUrl": "https://github.com/NandhaKishorM/rl-sales-augment",
+  "repository": {
+    "url": "https://github.com/NandhaKishorM/rl-sales-augment",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "rl-sales-augment",
+      "version": "0.3.0",
+      "transport": { "type": "stdio" },
+      "runtimeHint": "uvx",
+      "packageArguments": [],
+      "environmentVariables": []
+    }
+  ]
+}

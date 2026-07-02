@@ -1,5 +1,10 @@
 # rl-sales-augment
 
+[![PyPI](https://img.shields.io/pypi/v/rl-sales-augment)](https://pypi.org/project/rl-sales-augment/)
+[![Python](https://img.shields.io/pypi/pyversions/rl-sales-augment)](https://pypi.org/project/rl-sales-augment/)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-server-8A2BE2)](#connect-via-mcp)
+
 **A trained RL sales policy that augments any LLM.** The reinforcement-learning policy has learned,
 from a chaotic multi-segment sales world, *which strategic move works next* given the buyer's state.
 At serve time it reads the conversation, picks the move (RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT,
@@ -9,6 +14,10 @@ or GPU required to use it.
 > The LLM handles language and empathy; the RL policy supplies the *timing and strategy* the LLM
 > can't get from its priors. In a grounded conversational A/B, the same GPT/Gemini/Claude closes
 > far more deals with the policy than without it.
+
+**[▶ 67-second demo](https://github.com/NandhaKishorM/rl-sales-augment/releases/latest)** — real paired
+transcripts: the same LLM answers objections forever (no close) vs closes in 8 turns with the policy
+choosing the moves.
 
 ## Install
 
@@ -178,3 +187,8 @@ GNU AGPL-3.0-or-later. Copyright (C) 2026 Nandakishor M, Convai Innovations Pvt.
 If you run a modified version of this software as a network service, the AGPL requires you to offer
 its source to the users of that service. For commercial licensing outside the AGPL, contact
 nandakishor@convaiinnovations.com.
+
+## Credits
+
+Built by **Nandakishor M** (Convai Innovations Pvt. Ltd.) with **Claude (Anthropic)** as engineering
+co-author — architecture, evaluation harnesses, and packaging were pair-built end to end.
