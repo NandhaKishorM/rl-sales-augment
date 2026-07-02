@@ -1,0 +1,180 @@
+# rl-sales-augment
+
+**A trained RL sales policy that augments any LLM.** The reinforcement-learning policy has learned,
+from a chaotic multi-segment sales world, *which strategic move works next* given the buyer's state.
+At serve time it reads the conversation, picks the move (RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT,
+CLOSE, ...), and **your LLM writes the words**. The policy is bundled in the package — no training
+or GPU required to use it.
+
+> The LLM handles language and empathy; the RL policy supplies the *timing and strategy* the LLM
+> can't get from its priors. In a grounded conversational A/B, the same GPT/Gemini/Claude closes
+> far more deals with the policy than without it.
+
+## Install
+
+```bash
+pip install rl-sales-augment                 # core (numpy + torch) + the bundled model
+pip install "rl-sales-augment[gemini]"       # + Google Gemini (Vertex or API key)
+pip install "rl-sales-augment[openai]"       # + OpenAI
+pip install "rl-sales-augment[anthropic]"    # + Anthropic Claude
+pip install "rl-sales-augment[gemma]"        # + local Gemma 4 via transformers (Python >=3.10)
+pip install "rl-sales-augment[all]"          # everything
+```
+
+The core installs on **any Python that PyTorch supports (3.9–3.13)**; provider SDKs and the local
+Gemma path are optional extras.
+
+## Quickstart
+
+```python
+import rl_sales_augment as rsa
+
+# 1. pick any LLM  (or bring your own: gen = lambda prompt: my_llm(prompt))
+gen = rsa.providers.gemini_vertex(project="my-gcp-project")     # uses your gcloud ADC, no API key
+# gen = rsa.providers.openai_chat(model="gpt-4o")
+# gen = rsa.providers.anthropic_chat(model="claude-opus-4-8")
+
+# 2. load the bundled policy and wrap the LLM (optionally ground it in your company's facts)
+bot = rsa.load_agent(gen, company_ctx="""
+Company: NimbusEdge. Products: NimbusBox (on-prem appliance, ~$8k), NimbusOne (edge SaaS, ~$2k/mo).
+Edge: 1-day deploy, ~30% lower TCO than hyperscalers.
+""")
+bot.new_conversation(segment=7)     # optional bias (0-9, see rsa.SEG_NAMES)
+
+# 3. converse — perception -> RL move -> grounded reply, with internal memory
+out = bot.reply("honestly it feels expensive compared to just using AWS")
+print(out["chosen_move"])   # e.g. 'RAPPORT'  (the RL-chosen strategy)
+print(out["belief"])        # perceived buyer state {interest, trust, budget_fit, objection, patience}
+print(out["reply"])         # the words your LLM produced for that move
+```
+
+`bot` keeps its own memory (belief state + full history), so it works over any stateless LLM API.
+
+## Providers & models
+
+Every provider takes a `model=` argument (defaults reflect mid-2026 lineups; pass any id you have):
+
+```python
+rsa.providers.gemini_vertex(project="...", model="gemini-3.5-flash")   # or gemini-3.5-pro
+rsa.providers.gemini_api(model="gemini-3.5-flash")                     # AI Studio key
+rsa.providers.openai_chat(model="gpt-5.5")                             # or gpt-5.4, gpt-5.6-*
+rsa.providers.anthropic_chat(model="claude-sonnet-5")                  # or claude-opus-4-8
+rsa.providers.gemma_e2b(model="google/gemma-4-E2B-it")                 # local, needs [gemma]
+```
+
+## Conversation history & chat templates
+
+The agent keeps the full conversation and sends it to the LLM as **native chat turns** (proper
+`system` instruction + `user`/`assistant` roles), not history flattened into one string — so the
+model has real multi-turn context. The RL-chosen move for the current turn goes in the system prompt.
+
+## Bring your own LLM / any API
+
+Pass any `generate_fn` to `load_agent`. Two signatures are supported:
+
+```python
+bot = rsa.load_agent(lambda prompt: my_client.complete(prompt))          # simplest: prompt -> str
+
+def gen(prompt="", *, system=None, history=None) -> str:                 # richer: native chat + history
+    msgs = ([{"role": "system", "content": system}] if system else []) + (history or [])
+    if prompt: msgs.append({"role": "user", "content": prompt})
+    return my_client.chat(msgs)
+bot = rsa.load_agent(gen)
+```
+
+For any **OpenAI-compatible** endpoint (vLLM, Together, Groq, OpenRouter, a local server), just point
+`openai_chat` at it: `rsa.providers.openai_chat(base_url="https://...", api_key="...", model="...")`.
+A prompt containing `"Return ONLY JSON"` (the perception step) is decoded greedily.
+
+## Gemma 4 E2B (open weights)
+
+The policy was trained alongside Google's **Gemma 4 E2B** (not gated). Two ways to use it —
+both need `pip install "rl-sales-augment[gemma]"` and run on MPS / CUDA / CPU (auto-detected):
+
+```python
+import rl_sales_augment as rsa
+
+# 1) simple: Gemma writes the words for the portable agent (like any other LLM)
+gen = rsa.providers.gemma_e2b()               # downloads google/gemma-4-E2B-it on first use
+bot = rsa.load_agent(gen, company_ctx="...")
+
+# 2) Gemma-native: a SalesBot with the bundled experience bridge + trained style reranker,
+#    the open-weights-only path that can inject the RL 'experience' latent into Gemma's
+#    residual stream (the "common latent space")
+bot = rsa.load_gemma_bot(company_ctx="...")   # or pass a local path to avoid re-download
+out = bot.reply("we keep getting random crashes")
+```
+
+> Honest note: the bundled bridge's output layer is zero-initialised, so route 2's *latent*
+> injection is currently inert — augmentation runs at the prompt level (the RL move) plus
+> Gemma-native perception and best-of-N style reranking. Run the bridge-alignment step to
+> activate the latent path. Route 1 gives you a fully working Gemma bot today.
+
+## Connect via MCP
+
+Expose the RL policy as an [MCP](https://modelcontextprotocol.io) server, so any MCP client
+(Claude Desktop, Cursor, Windsurf, ...) can call it. The client's LLM does perception and writes the
+words; the server supplies the RL **strategy** (the tiny policy runs on CPU, no LLM on the server).
+
+```bash
+pip install "rl-sales-augment[mcp]"
+rl-sales-augment-mcp                 # stdio server (or: rl-sales-augment-mcp streamable-http)
+```
+
+Register it with your client (e.g. Claude Desktop / Cursor `mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "rl-sales-augment": { "command": "rl-sales-augment-mcp" }
+  }
+}
+```
+
+**Tools:** `next_move` (perceived belief → RL-chosen move + what it should accomplish),
+`perception_prompt` (rubric to estimate the belief from a conversation), `list_moves`,
+`list_segments`. The client's workflow: estimate the buyer's state → call `next_move` → write the
+reply that executes the returned move.
+
+## What's in the box
+
+| Symbol | Meaning |
+|---|---|
+| `rsa.load_agent(gen, ...)` | load the bundled policy, wrap an LLM → an `AugmentedAgent` |
+| `rsa.AugmentedAgent` | the portable serving agent (policy + perception + memory) |
+| `rsa.providers` | `gemini_vertex`, `gemini_api`, `openai_chat`, `anthropic_chat`, `gemma_e2b`, `local_gemma` |
+| `rsa.load_gemma_bot(...)` | Gemma-native `SalesBot` (open-weights experience-injection path) |
+| `rl-sales-augment-mcp` | MCP server exposing the policy as tools (`[mcp]` extra) |
+| `rsa.MODEL_PATH` | filesystem path to the bundled `rl_sales_agent.pt` |
+| `rsa.estimate_state_via(gen, history)` | the perception step alone (LLM → belief JSON) |
+| `rsa.ACTION_NAMES`, `rsa.SEG_NAMES` | the 8 moves and 10 market segments |
+| `rsa.SalesWorld`, `rsa.SalesConfig` | the world model (for retraining / evaluation) |
+
+## Evidence (grounded conversational A/B)
+
+A hidden verified sales world is the outcome oracle; the same LLM plays with and without the policy.
+
+- **vs Gemini 3.5 Flash** (16 paired conversations): with-RL closed **100%** in ~8 turns at **~3.5×**
+  the revenue of pure Gemini (which gets trapped answering objections and rarely asks for the sale).
+- **Quantitative** (~49k quarters): RL **3.2× revenue** and **94% win rate** vs the best hand-tuned
+  heuristic; emergent segment-specific tactics (DISCOUNT for price-sensitive SMB, HANDLE_OBJECTION
+  for enterprise), and it only CLOSEs when the deal is actually ripe.
+
+**Honest caveat:** the policy's strength is timing/strategy, not magic. The perception step reads the
+buyer's state from the conversation; feed it strong signals and it will reach the close. See the
+project's `EVALUATION.md`, `GEMINI_AB.md`, and `LOCAL_GEMMA_AB.md` for full transcripts and caveats.
+
+## Training & company fine-tuning (commercial)
+
+This package distributes the **trained policy and the serving stack only**. The world model's
+dynamics, the GPU-vectorized training pipeline, and company-specific fine-tuning (aligning the
+policy and its knowledge to your company from your documents) are the proprietary training stack of
+**Convai Innovations Pvt. Ltd.** For a policy trained on your market, your segments, and your
+playbook, contact **nandakishor@convaiinnovations.com**. The bundled policy is ready to serve as-is.
+
+## License
+
+GNU AGPL-3.0-or-later. Copyright (C) 2026 Nandakishor M, Convai Innovations Pvt. Ltd.
+If you run a modified version of this software as a network service, the AGPL requires you to offer
+its source to the users of that service. For commercial licensing outside the AGPL, contact
+nandakishor@convaiinnovations.com.
