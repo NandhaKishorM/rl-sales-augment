@@ -77,6 +77,62 @@ The agent keeps the full conversation and sends it to the LLM as **native chat t
 `system` instruction + `user`/`assistant` roles), not history flattened into one string — so the
 model has real multi-turn context. The RL-chosen move for the current turn goes in the system prompt.
 
+## Multi-turn conversations
+
+Two ways to run a conversation. **Stateful** — the agent remembers, you just keep calling `reply()`
+as the user asks the next question, and the next:
+
+```python
+bot = rsa.load_agent(gen, company_ctx="...")
+bot.new_conversation(segment=7)
+
+print(bot.reply("hey, what does NimbusBox actually cost?")["reply"])   # turn 1
+print(bot.reply("hmm, and how is that cheaper than AWS?")["reply"])    # turn 2 — remembers turn 1
+print(bot.reply("ok. what would rollout look like for us?")["reply"])  # turn 3 — full context
+```
+
+**Stateless (ChatGPT template)** — pass the whole conversation in OpenAI message format each call;
+ideal behind an API where the client owns the history:
+
+```python
+messages = [
+    {"role": "system", "content": "Extra facts for this call (optional)."},
+    {"role": "user", "content": "hey, what does NimbusBox cost?"},
+    {"role": "assistant", "content": "Depends on the setup. What are you running today?"},
+    {"role": "user", "content": "a few old racks. honestly budget is tight this quarter"},
+]
+out = bot.chat(messages)         # rebuilds belief from the history, RL picks the move
+print(out["chosen_move"], "->", out["reply"])
+messages.append({"role": "assistant", "content": out["reply"]})   # ...and continue the loop
+```
+
+## REST API (FastAPI)
+
+Serve it as a web service — a complete server is in
+[`examples/fastapi_server.py`](examples/fastapi_server.py):
+
+```bash
+pip install "rl-sales-augment[gemini,api]"      # [api] = fastapi + uvicorn
+GCP_PROJECT=my-project uvicorn fastapi_server:app --port 8000
+```
+
+```python
+from fastapi import FastAPI
+import rl_sales_augment as rsa
+
+app = FastAPI()
+bot = rsa.load_agent(rsa.providers.gemini_vertex(project="my-project"), company_ctx="...")
+
+@app.post("/v1/chat")
+def chat(payload: dict):                        # {"messages": [...OpenAI format...]}
+    return bot.chat(payload["messages"])        # {chosen_move, reply, belief, history_len}
+```
+
+```bash
+curl -X POST localhost:8000/v1/chat -H 'Content-Type: application/json' -d '{
+  "messages": [{"role": "user", "content": "honestly it feels expensive vs AWS"}]}'
+```
+
 ## Bring your own LLM / any API
 
 Pass any `generate_fn` to `load_agent`. Two signatures are supported:

@@ -321,3 +321,42 @@ class AugmentedAgent:
                 "belief": {k: round(getattr(l, k), 2)
                            for k in ("interest", "trust", "budget_fit", "objection", "patience")},
                 "history_len": len(self.history)}
+
+    def chat(self, messages, mode="chat"):
+        """ChatGPT-template entry point: pass the FULL conversation in OpenAI message format and
+        get the next assistant turn. Stateless per call (perfect behind a REST API) -- the agent
+        rebuilds its internal memory (belief + history) from `messages` every time.
+
+            messages = [
+                {"role": "system", "content": "optional extra company facts for this call"},
+                {"role": "user", "content": "hey, what does this cost?"},
+                {"role": "assistant", "content": "Depends on volume. What size team?"},
+                {"role": "user", "content": "about 40 seats, and honestly budget is tight"},
+            ]
+            out = bot.chat(messages)   # -> {"chosen_move", "reply", "belief", "history_len"}
+
+        The last message must be from the user. A leading system message (optional) is treated as
+        additional company context for this call only.
+        """
+        msgs = list(messages or [])
+        extra_ctx = ""
+        if msgs and msgs[0].get("role") == "system":
+            extra_ctx = str(msgs[0].get("content", "")).strip()
+            msgs = msgs[1:]
+        if not msgs or msgs[-1].get("role") != "user":
+            raise ValueError("messages must end with a 'user' message")
+        # rebuild internal memory from the prior turns
+        self.new_conversation()
+        for m in msgs[:-1]:
+            role = "customer" if m.get("role") == "user" else "bot"
+            self.history.append({"role": role, "text": str(m.get("content", ""))})
+            if role == "bot":
+                self.prev = str(m.get("content", ""))
+        if extra_ctx:
+            base_ctx = self.company_ctx
+            self.company_ctx = (base_ctx + "\n" + extra_ctx).strip()
+            try:
+                return self.reply(str(msgs[-1]["content"]), mode=mode)
+            finally:
+                self.company_ctx = base_ctx
+        return self.reply(str(msgs[-1]["content"]), mode=mode)

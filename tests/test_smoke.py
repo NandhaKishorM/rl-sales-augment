@@ -52,9 +52,29 @@ def test_chat_native_path():
     assert any(m["role"] == "assistant" for m in seen["history"])       # prior bot turn is in the history
 
 
+def test_chatgpt_template():
+    """chat(messages): OpenAI-format multi-turn in, next assistant turn out; stateless per call."""
+    bot = rsa.load_agent(mock_gen, company_ctx="Acme sells widgets.")
+    out = bot.chat([
+        {"role": "system", "content": "Discounts capped at 10%."},
+        {"role": "user", "content": "what does it cost?"},
+        {"role": "assistant", "content": "Depends on seats. How many do you need?"},
+        {"role": "user", "content": "40 seats, but budget is tight"},
+    ])
+    assert out["chosen_move"] in rsa.ACTION_NAMES and out["reply"].strip()
+    assert out["history_len"] == 4          # 3 prior turns rebuilt + this reply
+    # must reject a conversation that doesn't end with the user
+    try:
+        bot.chat([{"role": "assistant", "content": "hi"}])
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
 if __name__ == "__main__":
     test_constants_and_model()
     test_load_and_reply()
     test_perception_only()
     test_chat_native_path()
+    test_chatgpt_template()
     print("all smoke tests passed")

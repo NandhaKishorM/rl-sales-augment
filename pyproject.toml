@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.3.0"
+version = "0.4.0"
 description = "A trained RL sales policy that augments any LLM: it picks the strategic move, your LLM writes the words."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -38,7 +38,8 @@ openai = ["openai>=1.0"]
 anthropic = ["anthropic>=0.30"]
 gemma = ["transformers>=5.0", "pillow"]          # local Gemma 4 (transformers 5.x needs Python >=3.10)
 mcp = ["mcp>=1.2"]                                # expose the policy as an MCP server (Python >=3.10)
-all = ["google-genai>=2.0.0", "openai>=1.0", "anthropic>=0.30", "transformers>=5.0", "pillow", "mcp>=1.2"]
+api = ["fastapi>=0.110", "uvicorn"]               # REST serving (examples/fastapi_server.py)
+all = ["google-genai>=2.0.0", "openai>=1.0", "anthropic>=0.30", "transformers>=5.0", "pillow", "mcp>=1.2", "fastapi>=0.110", "uvicorn"]
 
 [project.scripts]
 rl-sales-augment-mcp = "rl_sales_augment.mcp_server:main"
