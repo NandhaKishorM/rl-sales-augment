@@ -1,7 +1,7 @@
 # rl-sales-augment
 
 A trained RL policy that picks the next sales move (rapport / pitch / objection / discount / close);
-your LLM writes the words. The trained model ships in the package — CPU, no finetuning, works with
+your LLM writes the words. The trained model ships in the package: CPU, no finetuning, works with
 any LLM.
 
 ```bash
@@ -22,7 +22,7 @@ out["belief"]        # {'interest': .5, 'trust': .5, 'budget_fit': .2, 'objectio
 out["reply"]         # the LLM's words, executing that move
 ```
 
-`bot.reply()` is stateful — keep calling it, the agent remembers. For stateless use
+`bot.reply()` is stateful: keep calling it, the agent remembers. For stateless use
 (e.g. behind an API), pass the whole conversation in OpenAI message format:
 
 ```python
@@ -70,7 +70,7 @@ A complete FastAPI server (`POST /v1/chat`, OpenAI-format messages) ships in
 
 ## Why not just call GPT-5.6 / Opus 4.8 / Gemini directly?
 
-Because what kills LLM sales conversations isn't the words — it's the **timing**. Frontier models
+Because what kills LLM sales conversations isn't the words, it's the **timing**. Frontier models
 are trained to be helpful and agreeable, so on a skeptical buyer they answer every objection
 politely, forever, and never risk asking for the deal (measured: **0/4 closes on adversarial
 buyers** while handling every question beautifully). A bigger model writes better sentences; it
@@ -83,11 +83,11 @@ The bundled policy is different in kind, not degree:
   that discounting converts SMBs but insults enterprise. An API model has read about selling; the
   policy has sold.
 - **State-dependent timing.** Prompting "be assertive, always close" makes a bot uniformly pushy.
-  The skill is *when*: the policy closes at high readiness and keeps building trust below it — same
-  LLM writing the words, right moment to ask. Result: 100% vs 19–31% close in a paired A/B, 3/4 vs
+  The skill is *when*: the policy closes at high readiness and keeps building trust below it. Same
+  LLM writing the words, right moment to ask. Result: 100% vs 19-31% close in a paired A/B, 3/4 vs
   0/4 on hard buyers (simulated; harness in the repo).
 - **Consistent and auditable.** Sampled LLM strategy swings run-to-run; the policy is deterministic,
-  and every turn logs `chosen_move` + `belief` — you can see *why* it did what it did.
+  and every turn logs `chosen_move` + `belief`, so you can see *why* it did what it did.
 - **Complementary and tiny.** A ~1MB MLP on CPU. Keep GPT-5.6 / Opus 4.8 / Gemini for language,
   empathy, and knowledge; add the decision layer they don't have. Retrainable on your own funnel's
   economics (the commercial offering).
@@ -97,5 +97,5 @@ Details, transcripts, and a 67-second demo:
 
 ## License
 
-AGPL-3.0-or-later. Training the policy on your own market is the commercial offering —
+AGPL-3.0-or-later. Training the policy on your own market is the commercial offering:
 nandakishor@convaiinnovations.com (Convai Innovations Pvt. Ltd.).

@@ -8,20 +8,20 @@
 **A trained RL sales policy that augments any LLM.** The reinforcement-learning policy has learned,
 from a chaotic multi-segment sales world, *which strategic move works next* given the buyer's state.
 At serve time it reads the conversation, picks the move (RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT,
-CLOSE, ...), and **your LLM writes the words**. The policy is bundled in the package — no training
+CLOSE, ...), and **your LLM writes the words**. The policy is bundled in the package: no training
 or GPU required to use it.
 
 > The LLM handles language and empathy; the RL policy supplies the *timing and strategy* the LLM
 > can't get from its priors. In a grounded conversational A/B, the same GPT/Gemini/Claude closes
 > far more deals with the policy than without it.
 
-**[▶ 67-second demo](https://github.com/NandhaKishorM/rl-sales-augment/releases/latest)** — real paired
-transcripts: the same LLM answers objections forever (no close) vs closes in 8 turns with the policy
+**[▶ 67-second demo](https://github.com/NandhaKishorM/rl-sales-augment/releases/latest)**: real paired
+transcripts. The same LLM answers objections forever (no close) vs closes in 8 turns with the policy
 choosing the moves.
 
 ## Why not just call GPT-5.6 / Opus 4.8 / Gemini directly?
 
-Because what kills LLM sales conversations isn't the words — it's the **timing**. Frontier models are
+Because what kills LLM sales conversations isn't the words, it's the **timing**. Frontier models are
 trained to be helpful and agreeable, so on a skeptical buyer they answer every objection politely,
 forever, and never risk asking for the deal (measured: **0/4 closes on adversarial buyers** while
 handling every question beautifully). A bigger model writes better sentences; it doesn't fix this,
@@ -35,12 +35,12 @@ The policy is different in kind, not degree:
   the policy has sold.
 - **State-dependent timing, which prompting can't give you.** "Be assertive, always close" makes a
   bot uniformly pushy; the skill is *when*. The policy closes at high readiness and keeps building
-  trust below it — same LLM writing the words, right moment to ask. That one difference is the
-  conversion: 100% vs 19–31% close in the paired A/B, 3/4 vs 0/4 on hard buyers.
-- **Consistent and auditable.** Sampled LLM strategy swings run-to-run (19–31% across identical
+  trust below it. Same LLM writing the words, right moment to ask. That one difference is the
+  conversion: 100% vs 19-31% close in the paired A/B, 3/4 vs 0/4 on hard buyers.
+- **Consistent and auditable.** Sampled LLM strategy swings run-to-run (19-31% across identical
   runs); the policy is deterministic, and every turn exposes `chosen_move` + `belief`.
 - **Complementary and tiny.** A ~1MB MLP on CPU. Keep the frontier model for language, empathy, and
-  knowledge; add the decision layer it doesn't have — and retrain that layer on your own funnel's
+  knowledge; add the decision layer it doesn't have, and retrain that layer on your own funnel's
   economics (the commercial offering).
 
 ## Install
@@ -54,7 +54,7 @@ pip install "rl-sales-augment[gemma]"        # + local Gemma 4 via transformers 
 pip install "rl-sales-augment[all]"          # everything
 ```
 
-The core installs on **any Python that PyTorch supports (3.9–3.13)**; provider SDKs and the local
+The core installs on **any Python that PyTorch supports (3.9-3.13)**; provider SDKs and the local
 Gemma path are optional extras.
 
 ## Quickstart
@@ -74,7 +74,7 @@ Edge: 1-day deploy, ~30% lower TCO than hyperscalers.
 """)
 bot.new_conversation(segment=7)     # optional bias (0-9, see rsa.SEG_NAMES)
 
-# 3. converse — perception -> RL move -> grounded reply, with internal memory
+# 3. converse: perception -> RL move -> grounded reply, with internal memory
 out = bot.reply("honestly it feels expensive compared to just using AWS")
 print(out["chosen_move"])   # e.g. 'RAPPORT'  (the RL-chosen strategy)
 print(out["belief"])        # perceived buyer state {interest, trust, budget_fit, objection, patience}
@@ -98,12 +98,12 @@ rsa.providers.gemma_e2b(model="google/gemma-4-E2B-it")                 # local, 
 ## Conversation history & chat templates
 
 The agent keeps the full conversation and sends it to the LLM as **native chat turns** (proper
-`system` instruction + `user`/`assistant` roles), not history flattened into one string — so the
+`system` instruction + `user`/`assistant` roles), not history flattened into one string, so the
 model has real multi-turn context. The RL-chosen move for the current turn goes in the system prompt.
 
 ## Multi-turn conversations
 
-Two ways to run a conversation. **Stateful** — the agent remembers, you just keep calling `reply()`
+Two ways to run a conversation. **Stateful**: the agent remembers, you just keep calling `reply()`
 as the user asks the next question, and the next:
 
 ```python
@@ -111,11 +111,11 @@ bot = rsa.load_agent(gen, company_ctx="...")
 bot.new_conversation(segment=7)
 
 print(bot.reply("hey, what does NimbusBox actually cost?")["reply"])   # turn 1
-print(bot.reply("hmm, and how is that cheaper than AWS?")["reply"])    # turn 2 — remembers turn 1
-print(bot.reply("ok. what would rollout look like for us?")["reply"])  # turn 3 — full context
+print(bot.reply("hmm, and how is that cheaper than AWS?")["reply"])    # turn 2, remembers turn 1
+print(bot.reply("ok. what would rollout look like for us?")["reply"])  # turn 3, full context
 ```
 
-**Stateless (ChatGPT template)** — pass the whole conversation in OpenAI message format each call;
+**Stateless (ChatGPT template)**: pass the whole conversation in OpenAI message format each call;
 ideal behind an API where the client owns the history:
 
 ```python
@@ -132,7 +132,7 @@ messages.append({"role": "assistant", "content": out["reply"]})   # ...and conti
 
 ## REST API (FastAPI)
 
-Serve it as a web service — a complete server is in
+Serve it as a web service; a complete server is in
 [`examples/fastapi_server.py`](examples/fastapi_server.py):
 
 ```bash
@@ -177,7 +177,7 @@ A prompt containing `"Return ONLY JSON"` (the perception step) is decoded greedi
 
 ## Gemma 4 E2B (open weights)
 
-The policy was trained alongside Google's **Gemma 4 E2B** (not gated). Two ways to use it —
+The policy was trained alongside Google's **Gemma 4 E2B** (not gated). Two ways to use it;
 both need `pip install "rl-sales-augment[gemma]"` and run on MPS / CUDA / CPU (auto-detected):
 
 ```python
@@ -196,7 +196,7 @@ out = bot.reply("we keep getting random crashes")
 
 > Since v0.5.0 the bundled bridge is **aligned** (trained by move-probe alignment + reply
 > self-distillation, Gemma frozen throughout): with a neutral prompt, the injected latent alone
-> steers Gemma's reply toward the policy-chosen move — reply-executes-move **19% → 49%** on the
+> steers Gemma's reply toward the policy-chosen move: reply-executes-move **19% → 49%** on the
 > training eval and **0% → 58%** in an independent local check, with fluency unchanged. Honest
 > framing: the latent is a lossy, complementary channel; prompt-level move injection (route 1 and
 > the agent's default) remains the primary mechanism and is what the headline A/B numbers use.
@@ -273,4 +273,4 @@ nandakishor@convaiinnovations.com.
 ## Credits
 
 Built by **Nandakishor M** (Convai Innovations Pvt. Ltd.) with **Claude (Anthropic)** as engineering
-co-author — architecture, evaluation harnesses, and packaging were pair-built end to end.
+co-author: architecture, evaluation harnesses, and packaging were pair-built end to end.
