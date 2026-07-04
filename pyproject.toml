@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.5.0"
+version = "0.5.1"
 description = "A trained RL sales policy that augments any LLM: it picks the strategic move, your LLM writes the words."
-readme = "README.md"
+readme = "PYPI_README.md"
 requires-python = ">=3.9"
 license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "Nandakishor M", email = "nandakishor@convaiinnovations.com" }]
