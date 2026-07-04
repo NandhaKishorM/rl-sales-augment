@@ -17,7 +17,14 @@ import torch.nn as nn
 AI_TELLS = ["—", "–", "leverage", "synergy", "robust", "seamless", "tailored", "elevate",
             "utilize", "furthermore", "moreover", "cutting-edge", "state-of-the-art", "best-in-class",
             "rest assured", "as an ai", "i completely understand", "unparalleled", "holistically",
-            "frictionless", "future-proof", "empower", "transformative", "end-to-end"]
+            "frictionless", "future-proof", "empower", "transformative", "end-to-end",
+            # sycophancy / fake-empathy tells: unearned praise and canned validation
+            "great question", "excellent question", "awesome question", "great point",
+            "you're absolutely right", "you are absolutely right", "absolutely right",
+            "that makes total sense", "makes complete sense", "i totally get",
+            "totally understandable", "that would be so frustrating", "super annoying",
+            "you've done great", "you have done great", "you did great", "kudos",
+            "valid concern", "i appreciate you sharing", "thanks for sharing"]
 _CONTR = re.compile(r"\b(i'm|you're|we've|it's|don't|can't|that's|i'll|we're|there's|you'll|let's)\b")
 
 

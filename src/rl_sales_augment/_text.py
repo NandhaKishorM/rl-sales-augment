@@ -9,11 +9,21 @@ HUMAN_STYLE = ("Talk like a real person on a live call, not a marketing script: 
                "use em dashes, bullet points, or buzzwords (leverage, synergy, robust, seamless, "
                "tailored, elevate). Vary how you open every time, and do NOT reuse the same "
                "acknowledgment (never keep saying 'I totally get that' or 'yeah, I get that'). "
-               "Don't sound scripted.")
+               "Never open with praise or canned empathy (no 'great question', 'you're absolutely "
+               "right', 'that would be so annoying'); react to the content itself. Don't sound scripted.")
+
+
+# strong sentence-initial validation tics, removed deterministically by _clean
+_LEAD_TICS = re.compile(
+    r"^(?:(?:that's|that is) (?:a )?(?:great|excellent|awesome|fantastic|really good) "
+    r"(?:question|point)|great question|excellent question|(?:you're|you are) absolutely right|"
+    r"i totally get (?:that|it)|i completely understand|that makes (?:total|complete|perfect) sense)"
+    r"[\s,.!]*", re.I)
 
 
 def _clean(text):
-    """Strip the common AI tells (em dashes, <think> blocks, stray markdown, wrapping quotes)."""
+    """Strip the common AI tells (em dashes, <think> blocks, stray markdown, wrapping quotes,
+    and a leading canned-validation opener when enough reply remains after it)."""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S | re.I)
     text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.S | re.I)
     text = re.sub(r"\s*[—–]\s*", ", ", text)   # em/en dash -> comma (the biggest AI tell)
@@ -21,7 +31,11 @@ def _clean(text):
     text = re.sub(r",\s*,", ",", text)                    # tidy the comma substitution
     text = re.sub(r",\s*([.!?])", r"\1", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
-    return text.strip().strip('"“”').strip()    # unwrap surrounding quotes
+    text = text.strip().strip('"“”').strip()    # unwrap surrounding quotes
+    stripped = _LEAD_TICS.sub("", text, count=1).lstrip()
+    if len(stripped) >= 20 and stripped != text:   # never strip a reply down to nothing
+        text = stripped[0].upper() + stripped[1:]
+    return text
 
 
 # Unicode-script detector: name the customer's script so even small LLMs mirror the language.

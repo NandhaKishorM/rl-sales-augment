@@ -87,6 +87,20 @@ def test_env_loader():
     os.unlink(path)
 
 
+def test_slop_stripper():
+    """_clean removes leading canned-validation tics but never guts a short reply."""
+    from rl_sales_augment._text import _clean
+    assert _clean("That's a great question! The box ships with rails and cables included.") == \
+        "The box ships with rails and cables included."
+    assert _clean("I completely understand, pricing feels steep until you see the TCO math.") == \
+        "Pricing feels steep until you see the TCO math."
+    assert _clean("That makes total sense.") == "That makes total sense."   # too short to strip
+    assert _clean("Sure, Tuesday works for the demo.") == "Sure, Tuesday works for the demo."
+    from rl_sales_augment.style import heuristic_style_score
+    assert heuristic_style_score("You're absolutely right, great question!") < \
+        heuristic_style_score("Fair point. Want me to send the real numbers?")
+
+
 if __name__ == "__main__":
     test_constants_and_model()
     test_load_and_reply()
@@ -94,4 +108,5 @@ if __name__ == "__main__":
     test_chat_native_path()
     test_chatgpt_template()
     test_env_loader()
+    test_slop_stripper()
     print("all smoke tests passed")
