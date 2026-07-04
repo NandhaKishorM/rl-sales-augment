@@ -104,6 +104,36 @@ def test_slop_stripper():
         heuristic_style_score("Fair point. Want me to send the real numbers?")
 
 
+def test_price_grounding():
+    """An invented price triggers one regeneration; a stubborn one is flagged, never silent."""
+    calls = {"n": 0}
+    def liar_then_honest(prompt="", **kw):
+        if "Return ONLY JSON" in (prompt or ""):
+            return '{"interest":0.5,"trust":0.5,"budget_fit":0.5,"objection":0.3,"patience":0.7}'
+        calls["n"] += 1
+        return ("The full package is $950 and standalone is $499." if calls["n"] == 1
+                else "I'll confirm the exact pricing and get back to you today, what would you use it for?")
+    bot = rsa.load_agent(liar_then_honest, company_ctx="Convai sells Nadhi, a desktop AI co-scientist.")
+    out = bot.reply("the subscription fee is?")
+    assert "ungrounded_price" not in out and "$950" not in out["reply"]
+
+    def stubborn(prompt="", **kw):
+        if "Return ONLY JSON" in (prompt or ""):
+            return '{"interest":0.5,"trust":0.5,"budget_fit":0.5,"objection":0.3,"patience":0.7}'
+        return "It costs $950 for the full package, a very fair deal."
+    bot2 = rsa.load_agent(stubborn, company_ctx="Convai sells Nadhi.")
+    out2 = bot2.reply("price?")
+    assert out2["ungrounded_price"] == [950.0]     # surfaced, never silent
+
+    def grounded(prompt="", **kw):
+        if "Return ONLY JSON" in (prompt or ""):
+            return '{"interest":0.5,"trust":0.5,"budget_fit":0.5,"objection":0.3,"patience":0.7}'
+        return "NimbusBox is about $8,000 one-time."
+    bot3 = rsa.load_agent(grounded, company_ctx="NimbusBox costs about $8k.")
+    out3 = bot3.reply("cost?")
+    assert "ungrounded_price" not in out3          # $8k == $8,000, no false positive
+
+
 if __name__ == "__main__":
     test_constants_and_model()
     test_load_and_reply()
@@ -112,4 +142,5 @@ if __name__ == "__main__":
     test_chatgpt_template()
     test_env_loader()
     test_slop_stripper()
+    test_price_grounding()
     print("all smoke tests passed")

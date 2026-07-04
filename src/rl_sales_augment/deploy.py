@@ -23,7 +23,7 @@ import inspect
 import torch
 from .world import (SalesWorld, SalesConfig, ACTION_NAMES, SEG_NAMES, N_ACTIONS,
                          RESEARCH, RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT, FOLLOW_UP, CLOSE, DROP)
-from ._text import HUMAN_STYLE, language_instruction   # light: no gemma import on the serving path
+from ._text import HUMAN_STYLE, language_instruction, ungrounded_prices   # light: no gemma import
 
 
 def _supports_chat(fn):
@@ -148,7 +148,9 @@ def bot_reply(agent, featurizer, gemma_lm, tok, bridge, world, deal_idx,
               f"Your next move is {ACTION_NAMES[move]}: {MOVE_INTENT[move]}.\n"
               f"The customer just said: \"{customer_message}\"\n"
               f"Reply to carry out that move, using the company facts and the conversation above. "
-              f"{style}{dont} {language_instruction(customer_message)}")
+              f"Use ONLY facts stated in the company knowledge above. If something is not covered "
+              f"there, especially pricing, say you will confirm the exact details and get back, "
+              f"never invent a number. {style}{dont} {language_instruction(customer_message)}")
     mnt = 80 if mode == "voice" else 140
     if style_reward is not None and gemma_feat is not None and n_candidates > 1:
         from .style import best_of_n
@@ -310,7 +312,9 @@ class AugmentedAgent:
         system = (f"{head}You are a human sales rep for a {seg} offering (~${l.value:.0f}k). "
                   f"Your next move is {ACTION_NAMES[move]}: {MOVE_INTENT[move]}. "
                   f"Reply to carry out that move, using the company facts and the conversation. "
-                  f"{style}{dont} {language_instruction(customer_message)}")
+                  f"Use ONLY facts stated in the company knowledge above. If something is not covered "
+                  f"there, especially pricing, say you will confirm the exact details and get back, "
+                  f"never invent a number. {style}{dont} {language_instruction(customer_message)}")
         messages = _to_messages(self.history)                            # MEMORY: full history as chat turns
         if self.rerank_n > 1:
             from .style import heuristic_style_score
@@ -318,11 +322,23 @@ class AugmentedAgent:
             reply = max(cands, key=lambda c: heuristic_style_score(c, (self.prev,)))
         else:
             reply = self._finish(_llm_call(self.gen, system, messages))
+        # grounding guardrail: never let an invented price out the door
+        sources = [self.company_ctx] + [t["text"] for t in self.history]
+        invented = ungrounded_prices(reply, *sources)
+        if invented:
+            warn = (" IMPORTANT: your draft invented a price that is NOT in the company facts. "
+                    "State no prices or amounts at all, say you will confirm exact pricing and "
+                    "get back, then continue the move.")
+            reply = self._finish(_llm_call(self.gen, system + warn, messages))
+            invented = ungrounded_prices(reply, *sources)
         self.prev = reply; self.history.append({"role": "bot", "text": reply})
-        return {"chosen_move": ACTION_NAMES[move], "reply": reply,
-                "belief": {k: round(getattr(l, k), 2)
-                           for k in ("interest", "trust", "budget_fit", "objection", "patience")},
-                "history_len": len(self.history)}
+        out = {"chosen_move": ACTION_NAMES[move], "reply": reply,
+               "belief": {k: round(getattr(l, k), 2)
+                          for k in ("interest", "trust", "budget_fit", "objection", "patience")},
+               "history_len": len(self.history)}
+        if invented:
+            out["ungrounded_price"] = invented     # integrators can block/route these
+        return out
 
     def chat(self, messages, mode="chat"):
         """ChatGPT-template entry point: pass the FULL conversation in OpenAI message format and

@@ -8,8 +8,9 @@ HUMAN_STYLE = ("Write like a real person typing in a chat, plain and direct. Sta
                "itself, never with praise or validation of what they said (no 'great question', "
                "'that makes sense', 'you're absolutely right'). Prefer one flowing sentence joined "
                "with commas over several short polished ones. Use casual connectors like honestly, "
-               "kinda, so, thats why. Give concrete numbers instead of adjectives, say about 30 "
-               "percent cheaper, not significantly cheaper. Explain the reason in the same breath "
+               "kinda, so, thats why. Give concrete numbers instead of adjectives when the company "
+               "facts provide them, and NEVER invent a price, date, or spec that is not in the "
+               "company facts, if you don't have it, say you'll confirm. Explain the reason in the same breath "
                "with as or because. Small imperfections are fine, polish is not. NEVER use em "
                "dashes, bullet points, or buzzwords (leverage, synergy, robust, seamless, tailored, "
                "elevate). Vary how you open every time, never reuse an acknowledgment. Style "
@@ -117,6 +118,36 @@ def detect_romanized(text):
     scores = {label: len(words & markers) for label, markers in _ROMANIZED.items()}
     label = max(scores, key=scores.get)
     return label if scores[label] >= 2 else None
+
+
+# Price-hallucination guardrail: a sales bot inventing a price is a quote the company may be
+# held to. Extract currency amounts and check every one against the allowed sources.
+_CURRENCY = re.compile(
+    r"(?:[$\u20b9\u20ac\u00a3]|usd|inr|eur|rs\.?)\s*([\d][\d,]*(?:\.\d+)?)\s*(k\b)?"
+    r"|([\d][\d,]*(?:\.\d+)?)\s*(k\b)?\s*(?:dollars|bucks|rupees|usd|inr|euros)", re.I)
+
+
+def _amounts(text):
+    out = set()
+    for m in _CURRENCY.finditer(text or ""):
+        num, k = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        if not num:
+            continue
+        try:
+            v = float(num.replace(",", ""))
+        except ValueError:
+            continue
+        out.add(round(v * (1000 if k else 1), 2))
+    return out
+
+
+def ungrounded_prices(reply, *sources):
+    """Currency amounts in `reply` that appear in none of the sources (company facts, the
+    conversation). Non-empty result = the model invented a price."""
+    allowed = set()
+    for s in sources:
+        allowed |= _amounts(s or "")
+    return sorted(a for a in _amounts(reply) if a not in allowed)
 
 
 def language_instruction(customer_message):
