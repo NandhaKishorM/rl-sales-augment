@@ -58,6 +58,10 @@ rsa.providers.openai_chat(base_url="http://...")              # any OpenAI-compa
 
 Or bring your own: any `gen(prompt) -> str` works.
 
+**Multilingual:** the bot replies in the customer's language automatically (tested: Malayalam,
+Hindi, Tamil, Japanese, Spanish, German; a built-in script detector keeps even small local models
+on-language for Indic/CJK/Arabic/Cyrillic scripts).
+
 ## API keys (.env)
 
 Put credentials in a `.env` file next to where you run your script; providers load it

@@ -112,6 +112,14 @@ GCP_PROJECT=my-gcp-project        # used by gemini_vertex() with gcloud ADC
 
 `rsa.load_env("/path/to/.env")` loads a specific file. Local Gemma (`gemma_e2b`) needs no key.
 
+## Multilingual
+
+The agent mirrors the customer's language automatically: perception reads non-English conversations
+(the policy itself only sees numbers), and a zero-dependency script detector names the customer's
+script in the prompt so even small local models comply. Tested end to end: Malayalam, Hindi, Tamil,
+Japanese, Spanish, German (Gemini 3.5 Flash: 6/6; local Gemma 4 E2B: all Indic scripts; Latin-script
+languages are reliable on frontier models, best-effort on small local ones).
+
 ## Conversation history & chat templates
 
 The agent keeps the full conversation and sends it to the LLM as **native chat turns** (proper

@@ -23,7 +23,7 @@ import inspect
 import torch
 from .world import (SalesWorld, SalesConfig, ACTION_NAMES, SEG_NAMES, N_ACTIONS,
                          RESEARCH, RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT, FOLLOW_UP, CLOSE, DROP)
-from ._text import HUMAN_STYLE   # light: serving path never imports the gemma module
+from ._text import HUMAN_STYLE, language_instruction   # light: no gemma import on the serving path
 
 
 def _supports_chat(fn):
@@ -147,7 +147,8 @@ def bot_reply(agent, featurizer, gemma_lm, tok, bridge, world, deal_idx,
     prompt = (f"{header}{convo}You are a human sales rep for a {seg} offering (deal size ~${l.value:.0f}k). "
               f"Your next move is {ACTION_NAMES[move]}: {MOVE_INTENT[move]}.\n"
               f"The customer just said: \"{customer_message}\"\n"
-              f"Reply to carry out that move, using the company facts and the conversation above. {style}{dont}")
+              f"Reply to carry out that move, using the company facts and the conversation above. "
+              f"{style}{dont} {language_instruction(customer_message)}")
     mnt = 80 if mode == "voice" else 140
     if style_reward is not None and gemma_feat is not None and n_candidates > 1:
         from .style import best_of_n
@@ -308,7 +309,8 @@ class AugmentedAgent:
         # history is passed as real chat turns (see _llm_call), not flattened into this string.
         system = (f"{head}You are a human sales rep for a {seg} offering (~${l.value:.0f}k). "
                   f"Your next move is {ACTION_NAMES[move]}: {MOVE_INTENT[move]}. "
-                  f"Reply to carry out that move, using the company facts and the conversation. {style}{dont}")
+                  f"Reply to carry out that move, using the company facts and the conversation. "
+                  f"{style}{dont} {language_instruction(customer_message)}")
         messages = _to_messages(self.history)                            # MEMORY: full history as chat turns
         if self.rerank_n > 1:
             from .style import heuristic_style_score
