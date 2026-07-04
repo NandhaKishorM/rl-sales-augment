@@ -95,6 +95,9 @@ def test_slop_stripper():
     assert _clean("I completely understand, pricing feels steep until you see the TCO math.") == \
         "Pricing feels steep until you see the TCO math."
     assert _clean("That makes total sense.") == "That makes total sense."   # too short to strip
+    assert _clean("That makes sense, AWS can seem pretty pricey upfront to most teams.") == \
+        "AWS can seem pretty pricey upfront to most teams."
+    assert _clean("That's fair. Want the real numbers?") == "That's fair. Want the real numbers?"
     assert _clean("Sure, Tuesday works for the demo.") == "Sure, Tuesday works for the demo."
     from rl_sales_augment.style import heuristic_style_score
     assert heuristic_style_score("You're absolutely right, great question!") < \

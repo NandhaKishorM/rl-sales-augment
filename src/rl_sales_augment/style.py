@@ -21,7 +21,7 @@ AI_TELLS = ["—", "–", "leverage", "synergy", "robust", "seamless", "tailored
             # sycophancy / fake-empathy tells: unearned praise and canned validation
             "great question", "excellent question", "awesome question", "great point",
             "you're absolutely right", "you are absolutely right", "absolutely right",
-            "that makes total sense", "makes complete sense", "i totally get",
+            "that makes total sense", "makes complete sense", "that makes sense", "i totally get",
             "totally understandable", "that would be so frustrating", "super annoying",
             "you've done great", "you have done great", "you did great", "kudos",
             "valid concern", "i appreciate you sharing", "thanks for sharing"]

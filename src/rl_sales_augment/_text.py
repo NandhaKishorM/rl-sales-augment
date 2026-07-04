@@ -17,7 +17,9 @@ HUMAN_STYLE = ("Talk like a real person on a live call, not a marketing script: 
 _LEAD_TICS = re.compile(
     r"^(?:(?:that's|that is) (?:a )?(?:great|excellent|awesome|fantastic|really good) "
     r"(?:question|point)|great question|excellent question|(?:you're|you are) absolutely right|"
-    r"i totally get (?:that|it)|i completely understand|that makes (?:total|complete|perfect) sense)"
+    r"i totally get (?:that|it)|i completely understand|"
+    r"that makes (?:(?:total|complete|perfect|a lot of) )?sense|makes sense|"
+    r"(?:that's|that is|totally|completely) understandable|i can understand that)"
     r"[\s,.!]*", re.I)
 
 
