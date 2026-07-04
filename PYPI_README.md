@@ -60,7 +60,8 @@ Or bring your own: any `gen(prompt) -> str` works.
 
 **Multilingual:** the bot replies in the customer's language automatically (tested: Malayalam,
 Hindi, Tamil, Japanese, Spanish, German; a built-in script detector keeps even small local models
-on-language for Indic/CJK/Arabic/Cyrillic scripts).
+on-language for Indic/CJK/Arabic/Cyrillic scripts). Romanized Indic is supported too: Manglish /
+Hinglish / Tanglish ("ntha visesham, sugano?") is detected and mirrored on frontier models.
 
 ## API keys (.env)
 

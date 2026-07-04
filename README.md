@@ -120,6 +120,12 @@ script in the prompt so even small local models comply. Tested end to end: Malay
 Japanese, Spanish, German (Gemini 3.5 Flash: 6/6; local Gemma 4 E2B: all Indic scripts; Latin-script
 languages are reliable on frontier models, best-effort on small local ones).
 
+**Romanized Indic (Manglish / Hinglish / Tanglish):** customers who type Malayalam, Hindi, or Tamil
+in English letters ("ntha visesham, sugano?") are detected by a marker-word lexicon and the bot
+replies in the same style: verified 3/3 on Gemini (perception reads the casual register correctly,
+e.g. a Manglish price gripe becomes objection 0.8). Honest limit: small local models (Gemma 4 E2B)
+understand romanized input but reply in English; use a frontier model for romanized-Indic output.
+
 ## Conversation history & chat templates
 
 The agent keeps the full conversation and sends it to the LLM as **native chat turns** (proper

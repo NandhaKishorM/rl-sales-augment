@@ -49,10 +49,65 @@ def detect_script(text):
     return best if counts[best] >= 3 else None
 
 
+# Romanized-Indic detection ("Manglish" = Malayalam typed in English letters, e.g. "ntha
+# visesham, sugano"; likewise Hinglish, Tanglish). Script detection is blind to these, so we
+# match high-frequency romanized marker words instead.
+_ROMANIZED = {
+    "Manglish (Malayalam typed in English letters)": {
+        "aanu", "anu", "aano", "alle", "ille", "illa", "undu", "undo", "ntha", "entha", "enthu",
+        "sugano", "sugam", "sheri", "pakshe", "vila", "kaashu", "kasu", "njan", "njangal",
+        "nammalk", "namuk", "okke", "onnu", "ippo", "appo", "pinne", "athe", "athu", "ithu",
+        "parayamo", "parayu", "kaanikko", "kaanikkamo", "venam", "veno", "vendam", "mathi",
+        "pore", "kure", "valare", "kooduthal", "kurakkamo", "kurach", "kollam", "kidu",
+        "adipoli", "chetta", "chechi", "mwone", "mone", "aayi", "ketto", "visesham", "karyam",
+        "aazhcha", "mathiyayirunnille", "kanditt", "kandittu", "nte", "ente", "avide", "ivide",
+    },
+    "Hinglish (Hindi typed in English letters)": {
+        "hai", "nahi", "nahin", "kya", "accha", "acha", "thoda", "zyada", "jyada", "chahiye",
+        "lekin", "magar", "bahut", "kitna", "hum", "hamari", "aap", "kaise", "kyun", "kyu",
+        "toh", "abhi", "wala", "karo", "karna", "sakte", "sakta", "agle", "hafte", "paisa",
+        "mehnga", "mehenga", "theek", "thik", "yaar", "bhai", "matlab", "sahi", "badhiya",
+        "mast", "kaafi", "chakkar", "batao", "dikha", "chalo", "gaya", "jata",
+    },
+    "Tanglish (Tamil typed in English letters)": {
+        "irukku", "iruku", "enna", "ennada", "romba", "seri", "panna", "pannunga", "pannalam",
+        "venum", "vendam", "epdi", "adhu", "idhu", "indha", "aana", "mudiyuma", "mudiyum",
+        "konjam", "engaloda", "ungaloda", "vilai", "kammi", "semma", "machan", "vera", "sollu",
+        "paaru", "paakalam", "paatha", "podhum", "kaatu", "kaatta", "bayama", "adhigam", "edhukku",
+    },
+}
+
+_ROM_EXAMPLE = {
+    "Manglish (Malayalam typed in English letters)":
+        "customer: 'vila valare kooduthal aanu' -> you: 'Athe alle bro, vila kandal angane thonnum. "
+        "Pakshe total cost nokkiyal ithu laabham aanu, njan kanichu tharaam.'",
+    "Hinglish (Hindi typed in English letters)":
+        "customer: 'price bahut zyada hai yaar' -> you: 'Sahi keh rahe ho bhai, pehle zyada lagta hai. "
+        "Lekin total cost dekho toh ye kaafi sasta padta hai, main dikhata hoon.'",
+    "Tanglish (Tamil typed in English letters)":
+        "customer: 'vilai romba adhigam da' -> you: 'Seri da, vilai paatha adhigama thaan therium. "
+        "Aana total cost paatha idhu romba save aagum, naan kaatren.'",
+}
+
+def detect_romanized(text):
+    """Best-effort detection of Indian languages typed in Roman letters. Returns the label of
+    the best-matching language when >=2 marker words hit, else None."""
+    words = set(w.strip(".,!?\"'()") for w in text.lower().split())
+    scores = {label: len(words & markers) for label, markers in _ROMANIZED.items()}
+    label = max(scores, key=scores.get)
+    return label if scores[label] >= 2 else None
+
+
 def language_instruction(customer_message):
     """A reply-language directive sized for small models: explicit script name when detectable."""
     script = detect_script(customer_message)
     if script:
         return (f"IMPORTANT: the customer is writing in {script} script. Write your ENTIRE reply in "
                 f"the customer's language, using {script} script. Do not reply in English.")
+    rom = detect_romanized(customer_message)
+    if rom:
+        lang = rom.split(" ")[1].strip("(")
+        return (f"IMPORTANT: the customer is typing {rom}. Reply the SAME way: casual {lang} words "
+                f"written in English letters, mixing simple English tech words naturally. Do NOT "
+                f"reply in plain English and do NOT use {lang} script. Style example, {_ROM_EXAMPLE[rom]}")
     return "IMPORTANT: write your ENTIRE reply in the same language as the customer's most recent message."
