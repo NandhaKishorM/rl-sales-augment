@@ -99,6 +99,8 @@ def test_slop_stripper():
         "AWS can seem pretty pricey upfront to most teams."
     assert _clean("That's fair. Want the real numbers?") == "That's fair. Want the real numbers?"
     assert _clean("Sure, Tuesday works for the demo.") == "Sure, Tuesday works for the demo."
+    assert _clean("I don\\'t have the exact number here, we\\'ll confirm it today.") == \
+        "I don't have the exact number here, we'll confirm it today."
     from rl_sales_augment.style import heuristic_style_score
     assert heuristic_style_score("You're absolutely right, great question!") < \
         heuristic_style_score("Fair point. Want me to send the real numbers?")
