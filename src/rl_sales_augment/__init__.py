@@ -18,16 +18,17 @@ fine-tuning are the commercial offering of Convai Innovations Pvt. Ltd.
 """
 from __future__ import annotations
 
-__version__ = "0.5.3"
+__version__ = "0.6.0"
 
 from .world import ACTION_NAMES, SEG_NAMES, SEGMENTS, SalesWorld, SalesConfig
 from .deploy import AugmentedAgent, SalesBot, estimate_state_via, MOVE_INTENT, next_moves
 from . import providers
+from ._env import load_env
 
 __all__ = [
     "load_agent", "load_gemma_bot", "model_path", "MODEL_PATH", "AugmentedAgent", "SalesBot",
     "estimate_state_via", "MOVE_INTENT", "next_moves", "providers",
-    "ACTION_NAMES", "SEG_NAMES", "SEGMENTS", "SalesWorld", "SalesConfig", "__version__",
+    "ACTION_NAMES", "SEG_NAMES", "SEGMENTS", "SalesWorld", "SalesConfig", "load_env", "__version__",
 ]
 
 

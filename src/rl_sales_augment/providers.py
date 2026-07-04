@@ -15,8 +15,13 @@ Install what you use:  pip install "rl-sales-augment[gemini]"  (or [openai], [an
 
 Bring your own model: pass any `gen(prompt)->str` (or the richer signature) to `load_agent`, or use
 `openai_chat(base_url=...)` for any OpenAI-compatible endpoint (vLLM, Together, Groq, OpenRouter, ...).
+
+Credentials: every factory auto-loads a `.env` file from the working directory (see `_env.load_env`),
+so put OPENAI_API_KEY / GEMINI_API_KEY / ANTHROPIC_API_KEY / GCP_PROJECT there instead of in code.
+Real environment variables take precedence over the file.
 """
 from __future__ import annotations
+from ._env import load_env
 
 _JSON_HINT = "Return ONLY JSON"   # emitted by the perception prompt; triggers greedy decoding
 
@@ -68,10 +73,16 @@ def _gemini_gen(client, model, base_tokens):
     return gen
 
 
-def gemini_vertex(project, location="global", model="gemini-3.5-flash", base_tokens=256):
+def gemini_vertex(project=None, location="global", model="gemini-3.5-flash", base_tokens=256):
     """Gemini via Vertex AI using Application Default Credentials (gcloud auth) -- no API key.
+    `project` defaults to GCP_PROJECT from the environment or a `.env` file.
     Latest ids (mid-2026): gemini-3.5-flash (default), gemini-3.5-pro, gemini-3.1-pro. Needs [gemini]."""
+    import os
     from google import genai
+    load_env()
+    project = project or os.environ.get("GCP_PROJECT")
+    if not project:
+        raise ValueError("gemini_vertex needs a GCP project: pass project=... or set GCP_PROJECT (env or .env)")
     return _gemini_gen(genai.Client(vertexai=True, project=project, location=location), model, base_tokens)
 
 
@@ -79,6 +90,7 @@ def gemini_api(api_key=None, model="gemini-3.5-flash", base_tokens=256):
     """Gemini via the Gemini Developer API (AI Studio key; reads GEMINI_API_KEY if None). Needs [gemini]."""
     import os
     from google import genai
+    load_env()
     return _gemini_gen(genai.Client(api_key=api_key or os.environ["GEMINI_API_KEY"]), model, base_tokens)
 
 
@@ -89,6 +101,7 @@ def openai_chat(model="gpt-5.5", api_key=None, base_url=None, base_tokens=400):
     Set `base_url` to point at ANY OpenAI-compatible API (vLLM, Together, Groq, OpenRouter, local).
     Needs [openai]."""
     from openai import OpenAI
+    load_env()                                   # OPENAI_API_KEY from .env if not already set
     client = OpenAI(api_key=api_key, base_url=base_url)
 
     def gen(prompt: str = "", *, system=None, history=None) -> str:
@@ -105,6 +118,7 @@ def anthropic_chat(model="claude-sonnet-5", api_key=None, base_tokens=512):
     """Anthropic Claude models (reads ANTHROPIC_API_KEY if None). Latest ids (mid-2026):
     claude-sonnet-5 (default), claude-opus-4-8, claude-haiku-4-5. Needs [anthropic]."""
     from anthropic import Anthropic
+    load_env()                                   # ANTHROPIC_API_KEY from .env if not already set
     client = Anthropic(api_key=api_key)
 
     def gen(prompt: str = "", *, system=None, history=None) -> str:

@@ -62,10 +62,12 @@ Gemma path are optional extras.
 ```python
 import rl_sales_augment as rsa
 
-# 1. pick any LLM  (or bring your own: gen = lambda prompt: my_llm(prompt))
-gen = rsa.providers.gemini_vertex(project="my-gcp-project")     # uses your gcloud ADC, no API key
-# gen = rsa.providers.openai_chat(model="gpt-4o")
-# gen = rsa.providers.anthropic_chat(model="claude-opus-4-8")
+# 1. pick any LLM. Local Gemma 4 first (no API key; the policy was trained alongside it):
+gen = rsa.providers.gemma_e2b()          # needs [gemma]; auto-downloads, runs on CPU/MPS/CUDA
+# or any API model (keys read from .env or the environment, see "API keys" below):
+# gen = rsa.providers.openai_chat(model="gpt-5.5")
+# gen = rsa.providers.anthropic_chat(model="claude-sonnet-5")
+# gen = rsa.providers.gemini_vertex()    # gcloud ADC + GCP_PROJECT
 
 # 2. load the bundled policy and wrap the LLM (optionally ground it in your company's facts)
 bot = rsa.load_agent(gen, company_ctx="""
@@ -94,6 +96,21 @@ rsa.providers.openai_chat(model="gpt-5.5")                             # or gpt-
 rsa.providers.anthropic_chat(model="claude-sonnet-5")                  # or claude-opus-4-8
 rsa.providers.gemma_e2b(model="google/gemma-4-E2B-it")                 # local, needs [gemma]
 ```
+
+## API keys (.env)
+
+Providers read credentials from the environment, and automatically load a `.env` file from the
+working directory first (existing environment variables always win). Put keys there, never in code:
+
+```bash
+# .env  (gitignored; never commit)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
+GCP_PROJECT=my-gcp-project        # used by gemini_vertex() with gcloud ADC
+```
+
+`rsa.load_env("/path/to/.env")` loads a specific file. Local Gemma (`gemma_e2b`) needs no key.
 
 ## Conversation history & chat templates
 

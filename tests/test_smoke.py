@@ -71,10 +71,27 @@ def test_chatgpt_template():
         pass
 
 
+def test_env_loader():
+    """load_env fills os.environ from a .env file but never overrides real env vars."""
+    import os, tempfile
+    os.environ["RSA_TEST_EXISTING"] = "keep"
+    with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False) as f:
+        f.write("# comment\nRSA_TEST_NEW='from-file'\nRSA_TEST_EXISTING=clobber\nexport RSA_TEST_EXPORTED=ok\n")
+        path = f.name
+    added = rsa.load_env(path)
+    assert os.environ["RSA_TEST_NEW"] == "from-file"
+    assert os.environ["RSA_TEST_EXISTING"] == "keep"          # real env wins
+    assert os.environ["RSA_TEST_EXPORTED"] == "ok"            # 'export ' prefix handled
+    assert "RSA_TEST_NEW" in added and "RSA_TEST_EXISTING" not in added
+    assert rsa.load_env(path) == {}                           # second load is a no-op
+    os.unlink(path)
+
+
 if __name__ == "__main__":
     test_constants_and_model()
     test_load_and_reply()
     test_perception_only()
     test_chat_native_path()
     test_chatgpt_template()
+    test_env_loader()
     print("all smoke tests passed")
