@@ -4,13 +4,18 @@ import re
 
 # Style instruction appended to customer-facing prompts so replies sound like a person,
 # not an AI. The RL policy picks the *move*; this shapes the *words*.
-HUMAN_STYLE = ("Talk like a real person on a live call, not a marketing script: use contractions, "
-               "everyday words and short sentences, and be a little informal and imperfect. NEVER "
-               "use em dashes, bullet points, or buzzwords (leverage, synergy, robust, seamless, "
-               "tailored, elevate). Vary how you open every time, and do NOT reuse the same "
-               "acknowledgment (never keep saying 'I totally get that' or 'yeah, I get that'). "
-               "Never open with praise or canned empathy (no 'great question', 'you're absolutely "
-               "right', 'that would be so annoying'); react to the content itself. Don't sound scripted.")
+HUMAN_STYLE = ("Write like a real person typing in a chat, plain and direct. Start with the point "
+               "itself, never with praise or validation of what they said (no 'great question', "
+               "'that makes sense', 'you're absolutely right'). Prefer one flowing sentence joined "
+               "with commas over several short polished ones. Use casual connectors like honestly, "
+               "kinda, so, thats why. Give concrete numbers instead of adjectives, say about 30 "
+               "percent cheaper, not significantly cheaper. Explain the reason in the same breath "
+               "with as or because. Small imperfections are fine, polish is not. NEVER use em "
+               "dashes, bullet points, or buzzwords (leverage, synergy, robust, seamless, tailored, "
+               "elevate). Vary how you open every time, never reuse an acknowledgment. Style "
+               "example: 'honestly the upfront number looks big, but the box kinda pays for itself "
+               "in about a year as you stop paying egress, and setup is one day, so the real "
+               "question is just timing.'")
 
 
 # strong sentence-initial validation tics, removed deterministically by _clean
