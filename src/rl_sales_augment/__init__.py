@@ -18,7 +18,7 @@ fine-tuning are the commercial offering of Convai Innovations Pvt. Ltd.
 """
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from .world import ACTION_NAMES, SEG_NAMES, SEGMENTS, SalesWorld, SalesConfig
 from .deploy import AugmentedAgent, SalesBot, estimate_state_via, MOVE_INTENT, next_moves
@@ -58,13 +58,14 @@ def load_gemma_bot(model: str = "google/gemma-4-E2B-it", *, device: str = None, 
     """Gemma-native augmented bot (open-weights only) -> a `SalesBot` using Gemma 4 E2B plus the
     bundled policy, experience bridge, and trained style reranker.
 
-    This is the path that CAN inject the RL 'experience' latent into Gemma's residual stream (the
-    "common latent space"). Note: the bundled bridge's output layer is zero-initialised, so the
-    latent injection is currently inert -- augmentation runs at the prompt level (the RL-chosen move)
-    plus Gemma-native perception and best-of-N style reranking. Run the bridge-alignment step to
-    activate the latent path. For a prompt-level bot that works with ANY LLM (including Gemma), use
-    `load_agent(providers.gemma_e2b())` instead.  Requires the [gemma] extra; `model` may be a local
-    path or a Hugging Face repo id (auto-downloaded, not gated).
+    This path injects the RL 'experience' latent into Gemma's residual stream (the "common latent
+    space"). Since v0.5.0 the bundled bridge is ALIGNED (trained via move-probe + reply
+    self-distillation): with a neutral prompt, injection alone steers the reply toward the
+    policy-chosen move (reply-executes-move 19% -> 49% on the training eval; 0% -> 58% in an
+    independent local check; fluency unchanged). It is a complementary channel -- prompt-level move
+    injection remains the primary mechanism. For a prompt-level bot that works with ANY LLM
+    (including Gemma), use `load_agent(providers.gemma_e2b())` instead. Requires the [gemma] extra;
+    `model` may be a local path or a Hugging Face repo id (auto-downloaded, not gated).
     """
     import torch
     from .gemma import GemmaFeaturizer

@@ -170,10 +170,12 @@ bot = rsa.load_gemma_bot(company_ctx="...")   # or pass a local path to avoid re
 out = bot.reply("we keep getting random crashes")
 ```
 
-> Honest note: the bundled bridge's output layer is zero-initialised, so route 2's *latent*
-> injection is currently inert — augmentation runs at the prompt level (the RL move) plus
-> Gemma-native perception and best-of-N style reranking. Run the bridge-alignment step to
-> activate the latent path. Route 1 gives you a fully working Gemma bot today.
+> Since v0.5.0 the bundled bridge is **aligned** (trained by move-probe alignment + reply
+> self-distillation, Gemma frozen throughout): with a neutral prompt, the injected latent alone
+> steers Gemma's reply toward the policy-chosen move — reply-executes-move **19% → 49%** on the
+> training eval and **0% → 58%** in an independent local check, with fluency unchanged. Honest
+> framing: the latent is a lossy, complementary channel; prompt-level move injection (route 1 and
+> the agent's default) remains the primary mechanism and is what the headline A/B numbers use.
 
 ## Connect via MCP
 

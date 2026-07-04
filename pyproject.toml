@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.4.0"
+version = "0.5.0"
 description = "A trained RL sales policy that augments any LLM: it picks the strategic move, your LLM writes the words."
 readme = "README.md"
 requires-python = ">=3.9"
