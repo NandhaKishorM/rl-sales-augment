@@ -165,7 +165,7 @@ def local_gemma(model_path, device=None, base_tokens=256):
                                       return_dict=True, return_tensors="pt")
         inp = {k: v.to(device) for k, v in inp.items()}
         gk = (dict(do_sample=False) if structured else
-              dict(do_sample=True, temperature=0.9, top_p=0.92, repetition_penalty=1.2, no_repeat_ngram_size=3))
+              dict(do_sample=True, temperature=0.8, top_p=0.9, repetition_penalty=1.15, no_repeat_ngram_size=3))
         out = model.generate(**inp, max_new_tokens=base_tokens, pad_token_id=tok.eos_token_id, **gk)
         return tok.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True).strip()
     return gen

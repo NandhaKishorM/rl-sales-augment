@@ -134,6 +134,20 @@ def test_price_grounding():
     assert "ungrounded_price" not in out3          # $8k == $8,000, no false positive
 
 
+def test_script_leak_guard():
+    """A stray-CJK draft triggers one regeneration; legit multilingual replies pass."""
+    calls = {"n": 0}
+    def glitchy_then_clean(prompt="", **kw):
+        if "Return ONLY JSON" in (prompt or ""):
+            return '{"interest":0.5,"trust":0.5,"budget_fit":0.5,"objection":0.3,"patience":0.7}'
+        calls["n"] += 1
+        return ("We are a technology公司 focused on local AI tools for research teams." if calls["n"] == 1
+                else "We build local AI tools for research teams, fully on your own machine.")
+    bot = rsa.load_agent(glitchy_then_clean, company_ctx="Convai sells Nadhi.")
+    out = bot.reply("what do you do?")
+    assert "script_mismatch" not in out and "公司" not in out["reply"]
+
+
 if __name__ == "__main__":
     test_constants_and_model()
     test_load_and_reply()
@@ -143,4 +157,5 @@ if __name__ == "__main__":
     test_env_loader()
     test_slop_stripper()
     test_price_grounding()
+    test_script_leak_guard()
     print("all smoke tests passed")

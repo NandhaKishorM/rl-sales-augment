@@ -150,6 +150,28 @@ def ungrounded_prices(reply, *sources):
     return sorted(a for a in _amounts(reply) if a not in allowed)
 
 
+def script_mismatch(reply, customer_message):
+    """Foreign-script leakage guard: small multilingual models occasionally sample a stray
+    CJK/other-script token mid-reply (e.g. a Chinese word inside an English sentence). Returns
+    the offending script name if the reply contains 2+ characters of a script that is neither
+    the customer's script nor plain Latin."""
+    expected = detect_script(customer_message)
+    counts = {}
+    for ch in reply or "":
+        o = ord(ch)
+        for (lo, hi), name in _SCRIPTS:
+            if lo <= o <= hi:
+                counts[name] = counts.get(name, 0) + 1
+                break
+    for name, n in counts.items():
+        if n < 2 or name == expected:
+            continue
+        if expected == "Japanese" and name == "Chinese":
+            continue                     # kanji inside Japanese is normal
+        return name
+    return None
+
+
 def language_instruction(customer_message):
     """A reply-language directive sized for small models: explicit script name when detectable."""
     script = detect_script(customer_message)

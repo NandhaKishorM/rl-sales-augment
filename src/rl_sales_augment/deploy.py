@@ -23,7 +23,7 @@ import inspect
 import torch
 from .world import (SalesWorld, SalesConfig, ACTION_NAMES, SEG_NAMES, N_ACTIONS,
                          RESEARCH, RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT, FOLLOW_UP, CLOSE, DROP)
-from ._text import HUMAN_STYLE, language_instruction, ungrounded_prices   # light: no gemma import
+from ._text import HUMAN_STYLE, language_instruction, ungrounded_prices, script_mismatch
 
 
 def _supports_chat(fn):
@@ -333,6 +333,12 @@ class AugmentedAgent:
                     "get back, then continue the move.")
             reply = self._finish(_llm_call(self.gen, system + warn, messages))
             invented = ungrounded_prices(reply, *sources)
+        bad_script = script_mismatch(reply, customer_message)
+        if bad_script:
+            warn2 = (f" IMPORTANT: your draft mixed {bad_script} characters into the reply. "
+                     f"Rewrite the ENTIRE reply cleanly in the customer's language only.")
+            reply = self._finish(_llm_call(self.gen, system + warn2, messages))
+            bad_script = script_mismatch(reply, customer_message)
         self.prev = reply; self.history.append({"role": "bot", "text": reply})
         out = {"chosen_move": ACTION_NAMES[move], "reply": reply,
                "belief": {k: round(getattr(l, k), 2)
@@ -340,6 +346,8 @@ class AugmentedAgent:
                "history_len": len(self.history)}
         if invented:
             out["ungrounded_price"] = invented     # integrators can block/route these
+        if bad_script:
+            out["script_mismatch"] = bad_script    # surfaced, never silent
         return out
 
     def chat(self, messages, mode="chat"):
