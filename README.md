@@ -19,6 +19,30 @@ or GPU required to use it.
 transcripts: the same LLM answers objections forever (no close) vs closes in 8 turns with the policy
 choosing the moves.
 
+## Why not just call GPT-5.6 / Opus 4.8 / Gemini directly?
+
+Because what kills LLM sales conversations isn't the words — it's the **timing**. Frontier models are
+trained to be helpful and agreeable, so on a skeptical buyer they answer every objection politely,
+forever, and never risk asking for the deal (measured: **0/4 closes on adversarial buyers** while
+handling every question beautifully). A bigger model writes better sentences; it doesn't fix this,
+because next-token training never rewards a deal that closes six turns later.
+
+The policy is different in kind, not degree:
+
+- **Trained on outcomes, not text.** PPO over millions of simulated deals with delayed, stochastic
+  rewards. It has *lost* deals to premature pitching, burned reputation on spam-closing, and learned
+  that discounting converts SMBs but insults enterprise buyers. An API model has read about selling;
+  the policy has sold.
+- **State-dependent timing, which prompting can't give you.** "Be assertive, always close" makes a
+  bot uniformly pushy; the skill is *when*. The policy closes at high readiness and keeps building
+  trust below it — same LLM writing the words, right moment to ask. That one difference is the
+  conversion: 100% vs 19–31% close in the paired A/B, 3/4 vs 0/4 on hard buyers.
+- **Consistent and auditable.** Sampled LLM strategy swings run-to-run (19–31% across identical
+  runs); the policy is deterministic, and every turn exposes `chosen_move` + `belief`.
+- **Complementary and tiny.** A ~1MB MLP on CPU. Keep the frontier model for language, empathy, and
+  knowledge; add the decision layer it doesn't have — and retrain that layer on your own funnel's
+  economics (the commercial offering).
+
 ## Install
 
 ```bash

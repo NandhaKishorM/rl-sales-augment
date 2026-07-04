@@ -68,11 +68,31 @@ pip install "rl-sales-augment[gemini,api]"
 A complete FastAPI server (`POST /v1/chat`, OpenAI-format messages) ships in
 [examples/fastapi_server.py](https://github.com/NandhaKishorM/rl-sales-augment/blob/main/examples/fastapi_server.py).
 
-## Why
+## Why not just call GPT-5.6 / Opus 4.8 / Gemini directly?
 
-Pure LLMs answer objections politely forever and never ask for the sale. In a paired A/B
-(simulated buyers, harness in the repo) the same LLM closed 100% with the policy vs 19–31% without;
-on adversarial buyers 3/4 vs 0/4. Details, transcripts, and a 67-second demo:
+Because what kills LLM sales conversations isn't the words — it's the **timing**. Frontier models
+are trained to be helpful and agreeable, so on a skeptical buyer they answer every objection
+politely, forever, and never risk asking for the deal (measured: **0/4 closes on adversarial
+buyers** while handling every question beautifully). A bigger model writes better sentences; it
+doesn't fix this, because next-token training never rewards a deal that closes six turns later.
+
+The bundled policy is different in kind, not degree:
+
+- **Trained on outcomes, not text.** PPO over millions of simulated deals with delayed, stochastic
+  rewards. It has *lost* deals to premature pitching, burned reputation on spam-closing, and learned
+  that discounting converts SMBs but insults enterprise. An API model has read about selling; the
+  policy has sold.
+- **State-dependent timing.** Prompting "be assertive, always close" makes a bot uniformly pushy.
+  The skill is *when*: the policy closes at high readiness and keeps building trust below it — same
+  LLM writing the words, right moment to ask. Result: 100% vs 19–31% close in a paired A/B, 3/4 vs
+  0/4 on hard buyers (simulated; harness in the repo).
+- **Consistent and auditable.** Sampled LLM strategy swings run-to-run; the policy is deterministic,
+  and every turn logs `chosen_move` + `belief` — you can see *why* it did what it did.
+- **Complementary and tiny.** A ~1MB MLP on CPU. Keep GPT-5.6 / Opus 4.8 / Gemini for language,
+  empathy, and knowledge; add the decision layer they don't have. Retrainable on your own funnel's
+  economics (the commercial offering).
+
+Details, transcripts, and a 67-second demo:
 **[github.com/NandhaKishorM/rl-sales-augment](https://github.com/NandhaKishorM/rl-sales-augment)**
 
 ## License

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.5.1"
-description = "A trained RL sales policy that augments any LLM: it picks the strategic move, your LLM writes the words."
+version = "0.5.2"
+description = "The decision layer frontier LLMs lack: an RL policy trained on outcomes decides WHEN to close; GPT/Gemini/Claude/Gemma write the words."
 readme = "PYPI_README.md"
 requires-python = ">=3.9"
 license = { text = "AGPL-3.0-or-later" }
