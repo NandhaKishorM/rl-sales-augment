@@ -148,9 +148,10 @@ def bot_reply(agent, featurizer, gemma_lm, tok, bridge, world, deal_idx,
               f"Your next move is {ACTION_NAMES[move]}: {MOVE_INTENT[move]}.\n"
               f"The customer just said: \"{customer_message}\"\n"
               f"Reply to carry out that move, using the company facts and the conversation above. "
-              f"Use ONLY facts stated in the company knowledge above. If something is not covered "
-              f"there, especially pricing, say you will confirm the exact details and get back, "
-              f"never invent a number. {style}{dont} {language_instruction(customer_message)}")
+              f"Use ONLY facts stated in the company knowledge above. If the customer ASKS for a "
+              f"fact that is not covered there, especially pricing, say you will confirm and get "
+              f"back, never invent a number. If the customer is just sharing information, never "
+              f"offer to check or confirm anything, use what they said and respond to it directly. {style}{dont} {language_instruction(customer_message)}")
     mnt = 80 if mode == "voice" else 140
     if style_reward is not None and gemma_feat is not None and n_candidates > 1:
         from .style import best_of_n
@@ -312,9 +313,10 @@ class AugmentedAgent:
         system = (f"{head}You are a human sales rep for a {seg} offering (~${l.value:.0f}k). "
                   f"Your next move is {ACTION_NAMES[move]}: {MOVE_INTENT[move]}. "
                   f"Reply to carry out that move, using the company facts and the conversation. "
-                  f"Use ONLY facts stated in the company knowledge above. If something is not covered "
-                  f"there, especially pricing, say you will confirm the exact details and get back, "
-                  f"never invent a number. {style}{dont} {language_instruction(customer_message)}")
+                  f"Use ONLY facts stated in the company knowledge above. If the customer ASKS for a "
+                  f"fact that is not covered there, especially pricing, say you will confirm and get "
+                  f"back, never invent a number. If the customer is just sharing information, never "
+                  f"offer to check or confirm anything, use what they said and respond to it directly. {style}{dont} {language_instruction(customer_message)}")
         messages = _to_messages(self.history)                            # MEMORY: full history as chat turns
         if self.rerank_n > 1:
             from .style import heuristic_style_score
