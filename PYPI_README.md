@@ -19,8 +19,8 @@ pip install "rl-sales-augment[gemma]"
 ```python
 import rl_sales_augment as rsa
 
-gen = rsa.providers.gemma_e2b()      # google/gemma-4-E2B-it, auto-downloads, runs on CPU/MPS/CUDA
-# gen = rsa.providers.gemma_e4b()    # google/gemma-4-E4B-it, the bridge-aligned flagship
+gen = rsa.providers.gemma_e4b()      # google/gemma-4-E4B-it, auto-downloads, runs on CPU/MPS/CUDA
+# gen = rsa.providers.gemma_e2b()    # google/gemma-4-E2B-it, the lighter 5B variant
 bot = rsa.load_agent(gen, company_ctx="Acme sells AcmeBox, an $8k on-prem appliance.")
 
 out = bot.reply("honestly it feels expensive vs AWS")
