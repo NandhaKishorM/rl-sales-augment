@@ -1,5 +1,6 @@
 """Offline smoke test: core install (numpy + torch) + the bundled model, mock LLM."""
 import os
+os.environ.setdefault("RSA_MODEL_DIR", "/Users/nandakishor/Desktop/world model")
 import rl_sales_augment as rsa
 
 
@@ -12,13 +13,17 @@ def mock_gen(prompt: str) -> str:
 def test_constants_and_model():
     assert len(rsa.ACTION_NAMES) == 8 and "CLOSE" in rsa.ACTION_NAMES
     assert len(rsa.SEG_NAMES) == 10
-    assert rsa.MODEL_PATH.endswith("rl_sales_agent.pt")
-    assert os.path.exists(rsa.MODEL_PATH)
+    assert os.path.exists(rsa.MODEL_PATH)                       # e4b bundle resolves
     import torch
     m = torch.load(rsa.MODEL_PATH, map_location="cpu", weights_only=False)["manifest"]
     assert m["obs_dim"] == 22 and m["gemma_hidden"] == 2560     # v3: chaotic world + E4B
     assert m["imperfection_distilled"] is True
     assert rsa.SalesWorld(rsa.SalesConfig(n_leads=1)).obs_dim == 22   # serve world matches
+    # dual-model: E2B injection stack (v2 policy + aligned 1536 bridge + its 16-dim world)
+    m2 = torch.load(rsa.MODEL_PATH_E2B, map_location="cpu", weights_only=False)["manifest"]
+    assert m2["obs_dim"] == 16 and m2["bridge_aligned"]
+    assert rsa.SalesWorld(rsa.SalesConfig(n_leads=1, world_version=2)).obs_dim == 16
+    assert callable(rsa.providers.hf_chat)
 
 
 def test_load_and_reply():

@@ -220,19 +220,21 @@ class SalesBot:
         self.gemma_feat, self.gemma_lm, self.tok = gemma_feat, gemma_feat.model, gemma_feat.tok
         self.bridge = ExperienceBridge(m["exp_dim"], gemma_feat.feature_dim).to(device)
         if b.get("bridge") is not None:
-            self.bridge.load_state_dict(b["bridge"])
+            self.bridge.load_state_dict({k: v.float() for k, v in b["bridge"].items()})
         self.style_reward = None
         if b.get("style_reward") is not None:
             from .style import StyleReward
             self.style_reward = StyleReward(gemma_feat.feature_dim).to(device)
-            self.style_reward.load_state_dict(b["style_reward"])
+            self.style_reward.load_state_dict({k: v.float() for k, v in b["style_reward"].items()})
         self.device, self.company_ctx, self.n_candidates, self.perceive = device, company_ctx, n_candidates, perceive
         self._seg = segment
+        self._world_version = 3 if m["obs_dim"] >= 22 else 2   # bundle decides its obs layout
         self.new_conversation(segment)
 
     def new_conversation(self, segment=None):
         seg = segment if segment is not None else self._seg
-        self.world = SalesWorld(SalesConfig(n_leads=1, segment_ids=(seg,) if seg is not None else None))
+        self.world = SalesWorld(SalesConfig(n_leads=1, world_version=self._world_version,
+                                            segment_ids=(seg,) if seg is not None else None))
         self.world.reset(); self.prev = ""; self.history = []
         return self
 

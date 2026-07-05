@@ -185,3 +185,11 @@ def gemma_e4b(model="google/gemma-4-E4B-it", device=None, base_tokens=256):
     """Local Gemma 4 E4B (the model the bundled v3 bridge is aligned to; ~16 GB download).
     Same contract as gemma_e2b."""
     return gemma_e2b(model=model, device=device, base_tokens=base_tokens)
+
+
+def hf_chat(model, device=None, base_tokens=256):
+    """ANY Hugging Face causal LM as a generate_fn for the portable agent (chat template if the
+    tokenizer has one). The RL policy is model-agnostic, so this gives every open-weights model
+    the full strategy + guardrail stack: rsa.load_agent(rsa.providers.hf_chat("Qwen/Qwen3-8B")).
+    Latent injection, however, needs an aligned bridge and stays Gemma E2B/E4B only."""
+    return gemma_e2b(model=model, device=device, base_tokens=base_tokens)

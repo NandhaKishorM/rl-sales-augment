@@ -51,6 +51,11 @@ pip install "rl-sales-augment[gemini]"       # + Google Gemini (Vertex or API ke
 pip install "rl-sales-augment[openai]"       # + OpenAI
 pip install "rl-sales-augment[anthropic]"    # + Anthropic Claude
 pip install "rl-sales-augment[gemma]"        # + local Gemma 4 via transformers (Python >=3.10)
+
+The wheel is tiny; the trained bundle (~79 MB) downloads once on first `load_agent()` from the
+project's GitHub release (sha256-verified, cached in `~/.cache/rl-sales-augment`). Air-gapped?
+Download `rl_sales_agent_v3.pt` / `rl_sales_agent_v2.pt` from the releases page and set
+`RSA_MODEL_DIR=/path/to/them`.
 pip install "rl-sales-augment[all]"          # everything
 ```
 
@@ -246,6 +251,12 @@ curl -X POST localhost:8000/v1/chat -H 'Content-Type: application/json' -d '{
   "messages": [{"role": "user", "content": "honestly it feels expensive vs AWS"}]}'
 ```
 
+### Any other open-weights model
+
+The policy is model-agnostic, so ANY Hugging Face causal LM can be the words-writer with the full
+strategy + guardrail stack: `rsa.load_agent(rsa.providers.hf_chat("Qwen/Qwen3-8B"))`. Latent
+injection stays Gemma-only (it needs a bridge aligned to that model's residual stream).
+
 ## Bring your own LLM / any API
 
 Pass any `generate_fn` to `load_agent`. Two signatures are supported:
@@ -280,7 +291,8 @@ bot = rsa.load_agent(gen, company_ctx="...")
 # 2) Gemma-native: a SalesBot with the bundled experience bridge + trained style reranker,
 #    the open-weights-only path that can inject the RL 'experience' latent into Gemma's
 #    residual stream (the "common latent space")
-bot = rsa.load_gemma_bot(company_ctx="...")   # needs google/gemma-4-E4B-it (~16 GB), or a local path
+bot = rsa.load_gemma_bot(company_ctx="...")               # E4B (~16 GB) -> v3 bridge
+bot = rsa.load_gemma_bot("google/gemma-4-E2B-it", ...)    # E2B (~10 GB) -> v2 bridge, auto-picked
 out = bot.reply("we keep getting random crashes")
 ```
 
@@ -328,7 +340,7 @@ reply that executes the returned move.
 | `rsa.providers` | `gemini_vertex`, `gemini_api`, `openai_chat`, `anthropic_chat`, `gemma_e2b`, `gemma_e4b`, `local_gemma` |
 | `rsa.load_gemma_bot(...)` | Gemma-native `SalesBot` (open-weights experience-injection path) |
 | `rl-sales-augment-mcp` | MCP server exposing the policy as tools (`[mcp]` extra) |
-| `rsa.MODEL_PATH` | filesystem path to the bundled `rl_sales_agent.pt` |
+| `rsa.MODEL_PATH` / `rsa.MODEL_PATH_E2B` | local paths to the v3 (E4B) and v2 (E2B) bundles (auto-download) |
 | `rsa.estimate_state_via(gen, history)` | the perception step alone (LLM → belief JSON) |
 | `rsa.ACTION_NAMES`, `rsa.SEG_NAMES` | the 8 moves and 10 market segments |
 | `rsa.SalesWorld`, `rsa.SalesConfig` | the serve-time world (obs v2: personas, market regime, urgency) |
