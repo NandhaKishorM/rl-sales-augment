@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.9.1"
+version = "0.9.2"
 description = "The decision layer frontier LLMs lack: an RL policy trained on outcomes decides WHEN to close; GPT/Gemini/Claude/Gemma write the words."
-readme = "PYPI_README.md"
+readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "Nandakishor M", email = "nandakishor@convaiinnovations.com" }]
