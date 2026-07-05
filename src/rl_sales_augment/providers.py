@@ -55,7 +55,7 @@ def _gemini_gen(client, model, base_tokens):
     def gen(prompt: str = "", *, system=None, history=None) -> str:
         structured = _JSON_HINT in (prompt or "")
         contents = _contents(prompt, history)
-        last = ""
+        last, err = "", None
         for attempt in range(5):
             cfg = types.GenerateContentConfig(
                 temperature=0.0 if structured else 0.9, top_p=0.95,
@@ -67,8 +67,14 @@ def _gemini_gen(client, model, base_tokens):
                 last = (r.text or "").strip()
                 if last:
                     return last
-            except Exception:
+            except Exception as e:
+                err = e
+                code = getattr(e, "status_code", None) or getattr(e, "code", None)
+                if code is not None and int(code) < 500 and int(code) != 429:
+                    raise    # non-retryable (bad model id, auth, request): surface, never mask
                 time.sleep(1.2 * (attempt + 1))
+        if not last and err is not None:
+            raise err        # exhausted retries with no output: fail loudly, not with ""
         return last
     return gen
 
@@ -76,7 +82,7 @@ def _gemini_gen(client, model, base_tokens):
 def gemini_vertex(project=None, location="global", model="gemini-3.5-flash", base_tokens=256):
     """Gemini via Vertex AI using Application Default Credentials (gcloud auth) -- no API key.
     `project` defaults to GCP_PROJECT from the environment or a `.env` file.
-    Latest ids (mid-2026): gemini-3.5-flash (default), gemini-3.5-pro, gemini-3.1-pro. Needs [gemini]."""
+    Latest ids (mid-2026): gemini-3.5-flash (default), gemini-3.5-pro. Needs [gemini]."""
     import os
     from google import genai
     load_env()
