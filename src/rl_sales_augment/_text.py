@@ -34,6 +34,7 @@ def _clean(text):
     and a leading canned-validation opener when enough reply remains after it)."""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S | re.I)
     text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.S | re.I)
+    text = re.sub(r"</?[a-z][a-z0-9]*(?:\\s[^>]{0,120})?/?>", "", text, flags=re.I)  # stray HTML tags (</blockquote>, <br/>)
     text = text.replace("\\'", "'").replace('\\"', '"')   # de-escape string-literal artifacts (don\'t -> don't)
     text = re.sub(r"\\+([',.!?])", r"\1", text)             # stray backslashes before punctuation
     text = re.sub(r"\s*[—–]\s*", ", ", text)   # em/en dash -> comma (the biggest AI tell)

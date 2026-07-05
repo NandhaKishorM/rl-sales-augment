@@ -184,6 +184,7 @@ def _chat_ids(tokenizer, prompt, device):
 def _clean(text):
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S | re.I)
     text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.S | re.I)
+    text = re.sub(r"</?[a-z][a-z0-9]*(?:\\s[^>]{0,120})?/?>", "", text, flags=re.I)  # stray HTML tags (</blockquote>, <br/>)
     text = re.sub(r"\s*[—–]\s*", ", ", text)   # em/en dash -> comma (the biggest AI tell)
     text = text.replace("*", "")                          # stray markdown bold/italics
     text = re.sub(r",\s*,", ",", text)                    # tidy the comma substitution
