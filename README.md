@@ -67,13 +67,14 @@ Gemma path are optional extras.
 ```python
 import rl_sales_augment as rsa
 
-# 1. pick any LLM. Local Gemma 4 first (no API key):
-gen = rsa.providers.gemma_e2b()          # needs [gemma]; light 5B words-writer, CPU/MPS/CUDA
-# gen = rsa.providers.gemma_e4b()        # the 8B model the bundled bridge is aligned to
-# or any API model (keys read from .env or the environment, see "API keys" below):
+# 1. pick any LLM. Fastest start is an API model (keys read from .env, see "API keys" below):
+gen = rsa.providers.gemini_vertex()                 # gcloud ADC + GCP_PROJECT
 # gen = rsa.providers.openai_chat(model="gpt-5.5")
 # gen = rsa.providers.anthropic_chat(model="claude-sonnet-5")
-# gen = rsa.providers.gemini_vertex()    # gcloud ADC + GCP_PROJECT
+# fully local instead (no API key, needs [gemma]; one-time model download):
+# gen = rsa.providers.gemma_e4b()        # Gemma 4 E4B, ~16 GB, the bridge-aligned flagship
+# gen = rsa.providers.gemma_e2b()        # Gemma 4 E2B, ~10 GB, light words-writer
+# gen = rsa.providers.hf_chat("Qwen/Qwen3-8B")      # or ANY Hugging Face causal LM
 
 # 2. load the bundled policy and wrap the LLM (optionally ground it in your company's facts)
 bot = rsa.load_agent(gen, company_ctx="""
