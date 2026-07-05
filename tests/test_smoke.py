@@ -14,6 +14,11 @@ def test_constants_and_model():
     assert len(rsa.SEG_NAMES) == 10
     assert rsa.MODEL_PATH.endswith("rl_sales_agent.pt")
     assert os.path.exists(rsa.MODEL_PATH)
+    import torch
+    m = torch.load(rsa.MODEL_PATH, map_location="cpu", weights_only=False)["manifest"]
+    assert m["obs_dim"] == 22 and m["gemma_hidden"] == 2560     # v3: chaotic world + E4B
+    assert m["imperfection_distilled"] is True
+    assert rsa.SalesWorld(rsa.SalesConfig(n_leads=1)).obs_dim == 22   # serve world matches
 
 
 def test_load_and_reply():

@@ -21,7 +21,7 @@ Gemma 4 E2B facts used (verified from the model card / transformers docs):
     supported route (same path multimodal soft tokens use).
   * `inputs_embeds` + `generate` is supported -> soft-prompt injection works.
 
-GPU + transformers + HF access to google/gemma-4-E2B-it required. Frozen: no base
+GPU + transformers + HF access to google/gemma-4-E4B-it required. Frozen: no base
 weight ever gets a gradient; only the small projections train.
 """
 from __future__ import annotations
@@ -55,7 +55,7 @@ class GemmaFeaturizer:
     hidden states via output_hidden_states -- robust for the multimodal model."""
     input_mode = "text"
 
-    def __init__(self, model_id="google/gemma-4-E2B-it", device="cuda",
+    def __init__(self, model_id="google/gemma-4-E4B-it", device="cuda",
                  dtype=torch.bfloat16, max_tokens=160, cache=True):
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.device = device

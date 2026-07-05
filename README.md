@@ -94,7 +94,7 @@ rsa.providers.gemini_vertex(project="...", model="gemini-3.5-flash")   # or gemi
 rsa.providers.gemini_api(model="gemini-3.5-flash")                     # AI Studio key
 rsa.providers.openai_chat(model="gpt-5.5")                             # or gpt-5.4, gpt-5.6-*
 rsa.providers.anthropic_chat(model="claude-sonnet-5")                  # or claude-opus-4-8
-rsa.providers.gemma_e2b(model="google/gemma-4-E2B-it")                 # local, needs [gemma]
+rsa.providers.gemma_e2b(model="google/gemma-4-E4B-it")                 # local, needs [gemma]
 ```
 
 ## API keys (.env)
@@ -262,7 +262,7 @@ For any **OpenAI-compatible** endpoint (vLLM, Together, Groq, OpenRouter, a loca
 `openai_chat` at it: `rsa.providers.openai_chat(base_url="https://...", api_key="...", model="...")`.
 A prompt containing `"Return ONLY JSON"` (the perception step) is decoded greedily.
 
-## Gemma 4 E2B (open weights)
+## Gemma 4 E4B (open weights)
 
 The policy was trained alongside Google's **Gemma 4 E2B** (not gated). Two ways to use it;
 both need `pip install "rl-sales-augment[gemma]"` and run on MPS / CUDA / CPU (auto-detected):
@@ -271,7 +271,7 @@ both need `pip install "rl-sales-augment[gemma]"` and run on MPS / CUDA / CPU (a
 import rl_sales_augment as rsa
 
 # 1) simple: Gemma writes the words for the portable agent (like any other LLM)
-gen = rsa.providers.gemma_e2b()               # downloads google/gemma-4-E2B-it on first use
+gen = rsa.providers.gemma_e2b()               # downloads google/gemma-4-E4B-it on first use
 bot = rsa.load_agent(gen, company_ctx="...")
 
 # 2) Gemma-native: a SalesBot with the bundled experience bridge + trained style reranker,

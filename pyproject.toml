@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.7.0"
+version = "0.8.0"
 description = "The decision layer frontier LLMs lack: an RL policy trained on outcomes decides WHEN to close; GPT/Gemini/Claude/Gemma write the words."
 readme = "PYPI_README.md"
 requires-python = ">=3.9"

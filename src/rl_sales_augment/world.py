@@ -48,6 +48,9 @@ N_SEGMENTS = len(SEGMENTS)
 
 PER_LEAD_OBS = 5 + 6   # segment economics(5) + interest,trust,budget,objection,patience,est_fit
 GLOBAL_OBS = 5         # market_heat, competition, reputation, discount_budget, step
+# world v2 (chaotic) adds per-lead personas + market regime + quarter urgency to the obs:
+# canonical layout  [seg5|lead6]*n | glob5 | [volatility,price_anchor]*n | regime one-hot(3) | urgency
+REGIMES = ("booming", "steady", "down")
 
 
 @dataclass
@@ -57,6 +60,7 @@ class SalesConfig:
     horizon: int = 60                 # a sales quarter
     segment_ids: tuple = None         # restrict leads to these segments (company focus); None=all
     init_discount_budget: float = 6.0
+    market_regime: str = "steady"     # v2: current market mood ("booming"/"steady"/"down")
 
 
 class Lead:
@@ -77,6 +81,10 @@ class Lead:
         self.patience = 1.0
         self.discount_given = 0.0
         self.est_fit = 0.5                              # observable estimate of true_fit
+        # v2 persona traits (same distributions the policy trained on)
+        self.volatility = float(0.5 + 1.3 * rng.random())      # 0.5 calm .. 1.8 erratic
+        self.price_anchor = float(rng.random())                 # 1.0 = discount-immune
+        self.disc_effect = self.disc_effect * (1.3 - self.price_anchor)
 
     def obs(self):
         seg = [self.value / 8.0, self.difficulty, self.churn_mult / 1.5,
@@ -103,7 +111,14 @@ class SalesWorld:
 
     @property
     def obs_dim(self):
-        return self.n * PER_LEAD_OBS + GLOBAL_OBS
+        return self.n * PER_LEAD_OBS + GLOBAL_OBS + 2 * self.n + 4
+
+    @property
+    def regime(self):
+        return max(0, REGIMES.index(self.cfg.market_regime)) if self.cfg.market_regime in REGIMES else 1
+
+    def _urgency(self):
+        return 1.0 if (self.step_i / self.cfg.horizon) >= 0.85 else 0.0
 
     def _reset_state(self):
         self.leads: List[Lead] = [Lead(self.rng, self.cfg) for _ in range(self.n)]
@@ -128,7 +143,10 @@ class SalesWorld:
         glob = np.array([self.market_heat, self.competition, self.reputation,
                          min(self.discount_budget / c.init_discount_budget, 1.0),
                          self.step_i / c.horizon], np.float32)
-        return np.concatenate(parts + [glob]).astype(np.float32)
+        personas = np.array([v for l in self.leads for v in (l.volatility / 1.8, l.price_anchor)],
+                            np.float32)
+        onehot = np.zeros(3, np.float32); onehot[self.regime] = 1.0
+        return np.concatenate(parts + [glob, personas, onehot, [self._urgency()]]).astype(np.float32)
 
     def _info(self):
         return {"revenue_total": self.revenue_total, "deals_won": self.deals_won,
@@ -151,4 +169,11 @@ class SalesWorld:
                 f"objections {w(l.objection,.3,.6,['few','some','many'])}, "
                 f"{'going cold' if l.patience<0.35 else 'engaged'}"
                 f"{', already discounted' if l.discount_given>0 else ''}.")
+        mood = REGIMES[self.regime]
+        l = self.leads[0]
+        temper = "erratic" if l.volatility > 1.3 else "steady" if l.volatility < 0.8 else "normal"
+        anchor = ("very price-firm" if l.price_anchor > 0.7 else
+                  "price-flexible" if l.price_anchor < 0.3 else "price-aware")
+        lines.append(f"The wider market is {mood}. This buyer is {temper} and {anchor}."
+                     + (" Quarter-end pressure is on." if self._urgency() else ""))
         return " ".join(lines)
