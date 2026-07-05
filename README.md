@@ -95,7 +95,8 @@ rsa.providers.gemini_vertex(project="...", model="gemini-3.5-flash")   # or gemi
 rsa.providers.gemini_api(model="gemini-3.5-flash")                     # AI Studio key
 rsa.providers.openai_chat(model="gpt-5.5")                             # or gpt-5.4, gpt-5.6-*
 rsa.providers.anthropic_chat(model="claude-sonnet-5")                  # or claude-opus-4-8
-rsa.providers.gemma_e2b(model="google/gemma-4-E4B-it")                 # local, needs [gemma]
+rsa.providers.gemma_e2b()                                              # local Gemma 4 E2B (5B), needs [gemma]
+rsa.providers.gemma_e4b()                                              # local Gemma 4 E4B (8B, bridge-aligned)
 ```
 
 ## API keys (.env)
@@ -111,7 +112,7 @@ GEMINI_API_KEY=AIza...
 GCP_PROJECT=my-gcp-project        # used by gemini_vertex() with gcloud ADC
 ```
 
-`rsa.load_env("/path/to/.env")` loads a specific file. Local Gemma (`gemma_e2b`) needs no key.
+`rsa.load_env("/path/to/.env")` loads a specific file. Local Gemma (`gemma_e2b`/`gemma_e4b`) needs no key.
 
 ## Multilingual
 
