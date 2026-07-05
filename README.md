@@ -62,8 +62,9 @@ Gemma path are optional extras.
 ```python
 import rl_sales_augment as rsa
 
-# 1. pick any LLM. Local Gemma 4 first (no API key; the policy was trained alongside it):
-gen = rsa.providers.gemma_e2b()          # needs [gemma]; auto-downloads, runs on CPU/MPS/CUDA
+# 1. pick any LLM. Local Gemma 4 first (no API key):
+gen = rsa.providers.gemma_e2b()          # needs [gemma]; light 5B words-writer, CPU/MPS/CUDA
+# gen = rsa.providers.gemma_e4b()        # the 8B model the bundled bridge is aligned to
 # or any API model (keys read from .env or the environment, see "API keys" below):
 # gen = rsa.providers.openai_chat(model="gpt-5.5")
 # gen = rsa.providers.anthropic_chat(model="claude-sonnet-5")
@@ -264,26 +265,29 @@ A prompt containing `"Return ONLY JSON"` (the perception step) is decoded greedi
 
 ## Gemma 4 E4B (open weights)
 
-The policy was trained alongside Google's **Gemma 4 E2B** (not gated). Two ways to use it;
-both need `pip install "rl-sales-augment[gemma]"` and run on MPS / CUDA / CPU (auto-detected):
+The bundled v3 policy was trained against a chaotic simulated market and its latent bridge is
+aligned to Google's **Gemma 4 E4B** (not gated). Two ways to use local Gemma; both need
+`pip install "rl-sales-augment[gemma]"` and run on MPS / CUDA / CPU (auto-detected):
 
 ```python
 import rl_sales_augment as rsa
 
 # 1) simple: Gemma writes the words for the portable agent (like any other LLM)
-gen = rsa.providers.gemma_e2b()               # downloads google/gemma-4-E4B-it on first use
+gen = rsa.providers.gemma_e2b()               # E2B is fine here: any LLM can write the words
 bot = rsa.load_agent(gen, company_ctx="...")
 
 # 2) Gemma-native: a SalesBot with the bundled experience bridge + trained style reranker,
 #    the open-weights-only path that can inject the RL 'experience' latent into Gemma's
 #    residual stream (the "common latent space")
-bot = rsa.load_gemma_bot(company_ctx="...")   # or pass a local path to avoid re-download
+bot = rsa.load_gemma_bot(company_ctx="...")   # needs google/gemma-4-E4B-it (~16 GB), or a local path
 out = bot.reply("we keep getting random crashes")
 ```
 
-> Since v0.5.0 the bundled bridge is **aligned** (trained by move-probe alignment + reply
-> self-distillation, Gemma frozen throughout): with a neutral prompt, the injected latent alone
-> steers Gemma's reply toward the policy-chosen move: reply-executes-move **19% → 49%** on the
+> Since v0.8.0 the bundled bridge is aligned to **E4B** on the chaotic world (move-probe alignment
+> + imperfect-human self-distillation, Gemma frozen throughout): with a NEUTRAL prompt, the injected
+> latent alone lifts move-probe accuracy **35% → 99.8%** and reply-executes-move **23% → 61.5%**,
+> with zero degeneration, and carries the distilled human voice. Earlier E2B alignment for
+> reference: reply-executes-move **19% → 49%** on the
 > training eval and **0% → 58%** in an independent local check, with fluency unchanged. Honest
 > framing: the latent is a lossy, complementary channel; prompt-level move injection (route 1 and
 > the agent's default) remains the primary mechanism and is what the headline A/B numbers use.
@@ -320,13 +324,20 @@ reply that executes the returned move.
 |---|---|
 | `rsa.load_agent(gen, ...)` | load the bundled policy, wrap an LLM → an `AugmentedAgent` |
 | `rsa.AugmentedAgent` | the portable serving agent (policy + perception + memory) |
-| `rsa.providers` | `gemini_vertex`, `gemini_api`, `openai_chat`, `anthropic_chat`, `gemma_e2b`, `local_gemma` |
+| `rsa.providers` | `gemini_vertex`, `gemini_api`, `openai_chat`, `anthropic_chat`, `gemma_e2b`, `gemma_e4b`, `local_gemma` |
 | `rsa.load_gemma_bot(...)` | Gemma-native `SalesBot` (open-weights experience-injection path) |
 | `rl-sales-augment-mcp` | MCP server exposing the policy as tools (`[mcp]` extra) |
 | `rsa.MODEL_PATH` | filesystem path to the bundled `rl_sales_agent.pt` |
 | `rsa.estimate_state_via(gen, history)` | the perception step alone (LLM → belief JSON) |
 | `rsa.ACTION_NAMES`, `rsa.SEG_NAMES` | the 8 moves and 10 market segments |
-| `rsa.SalesWorld`, `rsa.SalesConfig` | the world model (for retraining / evaluation) |
+| `rsa.SalesWorld`, `rsa.SalesConfig` | the serve-time world (obs v2: personas, market regime, urgency) |
+
+**The bundled model (v3):** trained with PPO for 40M steps on a chaotic simulated market
+(3-state economic regimes, per-buyer personas, budget freezes, champion exits, ghosting, price
+wars, FALSE buying signals, competitor poaching, quarter-end urgency). On that world it earns
+**2.7x the best hand-tuned heuristic** (independently replicated). Set the current market mood
+with `SalesConfig(market_regime="down")` and the policy strategizes for it, that is a trained-on
+input, not a prompt hint.
 
 ## Evidence (grounded conversational A/B)
 
@@ -334,9 +345,12 @@ A hidden verified sales world is the outcome oracle; the same LLM plays with and
 
 - **vs Gemini 3.5 Flash** (16 paired conversations): with-RL closed **100%** in ~8 turns at **~3.5×**
   the revenue of pure Gemini (which gets trapped answering objections and rarely asks for the sale).
-- **Quantitative** (~49k quarters): RL **3.2× revenue** and **94% win rate** vs the best hand-tuned
-  heuristic; emergent segment-specific tactics (DISCOUNT for price-sensitive SMB, HANDLE_OBJECTION
-  for enterprise), and it only CLOSEs when the deal is actually ripe.
+- **Quantitative** (~49k quarters, v2 world model): RL **3.2× revenue** and **94% win rate** vs the
+  best hand-tuned heuristic; emergent segment-specific tactics (DISCOUNT for price-sensitive SMB,
+  HANDLE_OBJECTION for enterprise), and it only CLOSEs when the deal is actually ripe.
+- **v3 (current bundle, harder chaotic world):** **2.68×** the expert heuristic on the training run
+  and **2.88×** in an independent local replication; latent injection on E4B verified at
+  **99.8%** move-probe accuracy with **0%** degeneration.
 
 **Honest caveat:** the policy's strength is timing/strategy, not magic. The perception step reads the
 buyer's state from the conversation; feed it strong signals and it will reach the close. See the

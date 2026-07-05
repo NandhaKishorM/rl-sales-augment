@@ -179,3 +179,9 @@ def gemma_e2b(model="google/gemma-4-E2B-it", device=None, base_tokens=256):
         gen = gemma_e2b("/path/to/local/gemma-4-E2B-it")   # use a local copy
     """
     return local_gemma(model, device=device, base_tokens=base_tokens)
+
+
+def gemma_e4b(model="google/gemma-4-E4B-it", device=None, base_tokens=256):
+    """Local Gemma 4 E4B (the model the bundled v3 bridge is aligned to; ~16 GB download).
+    Same contract as gemma_e2b."""
+    return gemma_e2b(model=model, device=device, base_tokens=base_tokens)
