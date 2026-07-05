@@ -1,4 +1,4 @@
-include LICENSE README.md PYPI_README.md pyproject.toml
+include LICENSE README.md pyproject.toml
 recursive-include src/rl_sales_augment/data *.pt
 include src/rl_sales_augment/py.typed
 recursive-include examples *.py
