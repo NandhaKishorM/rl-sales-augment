@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rl-sales-augment"
-version = "0.6.9"
+version = "0.7.0"
 description = "The decision layer frontier LLMs lack: an RL policy trained on outcomes decides WHEN to close; GPT/Gemini/Claude/Gemma write the words."
 readme = "PYPI_README.md"
 requires-python = ">=3.9"
@@ -39,7 +39,8 @@ anthropic = ["anthropic>=0.30"]
 gemma = ["transformers>=5.0", "pillow"]          # local Gemma 4 (transformers 5.x needs Python >=3.10)
 mcp = ["mcp>=1.2"]                                # expose the policy as an MCP server (Python >=3.10)
 api = ["fastapi>=0.110", "uvicorn"]               # REST serving (examples/fastapi_server.py)
-all = ["google-genai>=2.0.0", "openai>=1.0", "anthropic>=0.30", "transformers>=5.0", "pillow", "mcp>=1.2", "fastapi>=0.110", "uvicorn"]
+docs = ["pypdf", "python-docx", "openpyxl"]       # build_company_ctx from PDF/DOCX/XLSX
+all = ["google-genai>=2.0.0", "openai>=1.0", "anthropic>=0.30", "transformers>=5.0", "pillow", "mcp>=1.2", "fastapi>=0.110", "uvicorn", "pypdf", "python-docx", "openpyxl"]
 
 [project.scripts]
 rl-sales-augment-mcp = "rl_sales_augment.mcp_server:main"

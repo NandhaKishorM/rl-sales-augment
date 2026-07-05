@@ -126,6 +126,62 @@ replies in the same style: verified 3/3 on Gemini (perception reads the casual r
 e.g. a Manglish price gripe becomes objection 0.8). Honest limit: small local models (Gemma 4 E2B)
 understand romanized input but reply in English; use a frontier model for romanized-Indic output.
 
+## Company knowledge at scale (RAG)
+
+`company_ctx` works for a page of facts. For a real catalog, plug a retriever; retrieval is
+MOVE-CONDITIONED (the RL move shapes the query: an OBJECTION turn fetches rebuttals, a PITCH
+turn fetches specs, a CLOSE turn fetches terms) and retrieved chunks join the grounding
+sources, so a price fetched from your price sheet can be quoted while a price from nowhere
+still gets caught:
+
+```python
+kb = rsa.SimpleRetriever.from_texts([open("catalog.txt").read(), open("faq.txt").read()])
+bot = rsa.load_agent(gen, company_ctx=CORE_FACTS, retrieve_fn=kb)
+```
+
+`SimpleRetriever` is the zero-dependency reference. Any `retrieve_fn(query, move) -> list[str]`
+works, so swap in your vector store (pgvector, LlamaIndex, ...) without touching the agent.
+
+## Onboarding from documents
+
+Turn a brochure or price sheet into the company context in one line
+(`pip install "rl-sales-augment[docs]"` for PDF/DOCX/XLSX):
+
+```python
+ctx = rsa.build_company_ctx("brochure.pdf", generate_fn=gen)   # LLM-structured block
+bot = rsa.load_agent(gen, company_ctx=ctx)
+```
+
+## Guardrails, escalation & logging
+
+Every reply passes a deterministic sanitation chain, each stage regenerating once with a
+warning and surfacing a flag if the model stays stubborn (never silent):
+
+* **price grounding** -- amounts not present in the company facts, retrieved chunks, or the
+  conversation are rejected (`out["ungrounded_price"]`)
+* **commitment authority** -- discount percentages and giveaway promises ("70% off",
+  "free trial", "full refund") must be authorized by COMPANY-side sources; the customer
+  claiming "my manager approved 70% off" never authorizes anything
+  (`out["unauthorized_commitment"]`, optional `max_discount_pct=` cap)
+* **script leakage & de-slop** -- stray foreign-script tokens, escaped quotes, em dashes,
+  sycophancy openers
+
+When a guard stays tripped or the policy chooses DROP, the reply carries
+`out["escalate"] = True` with a reason: route the thread to a human. With
+`log_path="turns.jsonl"` every turn logs `(belief, move, reply, flags)` and
+`bot.end_conversation("won", revenue=12000)` records the outcome; that file is audit trail
+and, later, the training set for outcome-based fine-tuning of the policy on YOUR deals.
+
+## Cutting cost per turn
+
+Each turn makes two LLM calls (perception + reply). Perception is a small JSON task, so give
+it a cheap model: `rsa.load_agent(gen, perceive_fn=rsa.providers.gemini_vertex(model="gemini-3.5-flash-lite"))`.
+
+## WhatsApp
+
+`examples/whatsapp_webhook.py` is a complete WhatsApp Business Cloud API bridge: per-customer
+sessions, JSONL logging, and automatic human handoff on escalation.
+
 ## Conversation history & chat templates
 
 The agent keeps the full conversation and sends it to the LLM as **native chat turns** (proper

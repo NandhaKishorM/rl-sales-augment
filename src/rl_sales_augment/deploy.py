@@ -23,7 +23,8 @@ import inspect
 import torch
 from .world import (SalesWorld, SalesConfig, ACTION_NAMES, SEG_NAMES, N_ACTIONS,
                          RESEARCH, RAPPORT, PITCH, HANDLE_OBJECTION, DISCOUNT, FOLLOW_UP, CLOSE, DROP)
-from ._text import HUMAN_STYLE, language_instruction, ungrounded_prices, script_mismatch
+from ._text import (HUMAN_STYLE, language_instruction, ungrounded_prices,
+                    script_mismatch, unauthorized_commitments)
 
 
 def _supports_chat(fn):
@@ -270,7 +271,8 @@ class AugmentedAgent:
     """
 
     def __init__(self, bundle_path, generate_fn, device="cpu", company_ctx="", segment=None,
-                 rerank_n=1, humanize=True):
+                 rerank_n=1, humanize=True, retrieve_fn=None, log_path=None,
+                 max_discount_pct=None, perceive_fn=None):
         import torch
         from .policy import MultiActorCritic, ScratchFeaturizer
         b = torch.load(bundle_path, map_location=device, weights_only=False); m = b["manifest"]
@@ -279,13 +281,35 @@ class AugmentedAgent:
         self.feat = ScratchFeaturizer(m["obs_dim"], device=device)
         self.gen, self.company_ctx, self._seg = generate_fn, company_ctx, segment
         self.rerank_n, self.humanize, self.device = rerank_n, humanize, device
+        self.retrieve_fn = retrieve_fn          # retrieve_fn(query, move) -> [chunks]
+        self.log_path = log_path                # JSONL turn/outcome log (audit + future training data)
+        self.max_discount_pct = max_discount_pct
+        self.perceive_fn = perceive_fn          # optional cheaper LLM for the perception call
         self.new_conversation(segment)
 
+    def _log(self, record):
+        if not self.log_path:
+            return
+        import json, time
+        record = dict(record, session=self.session_id, ts=round(time.time(), 3))
+        with open(self.log_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
     def new_conversation(self, segment=None):
+        import uuid
         seg = segment if segment is not None else self._seg
         self.world = SalesWorld(SalesConfig(n_leads=1, segment_ids=(seg,) if seg is not None else None))
         self.world.reset(); self.history = []; self.prev = ""       # <- the internal memory
+        self.session_id = uuid.uuid4().hex[:12]
         return self
+
+    def end_conversation(self, outcome, revenue=None, note=""):
+        """Record how the conversation ended ("won" / "lost" / "handoff" / ...). The outcome
+        joins the turn log: together they are exactly the dataset a future outcome-based
+        fine-tune of the policy trains on."""
+        self._log({"type": "outcome", "outcome": outcome, "revenue": revenue, "note": note,
+                   "turns": len(self.history)})
+        return {"session": self.session_id, "outcome": outcome, "turns": len(self.history)}
 
     @torch.no_grad()
     def _rl_move(self):
@@ -300,14 +324,22 @@ class AugmentedAgent:
 
     def reply(self, customer_message, mode="chat"):
         self.history.append({"role": "customer", "text": customer_message})
-        for k, v in estimate_state_via(self.gen, self.history).items():   # PERCEPTION -> belief memory
+        for k, v in estimate_state_via(self.perceive_fn or self.gen, self.history).items():   # PERCEPTION
             setattr(self.world.leads[0], k, v)
         move = self._rl_move()                                            # STRATEGY: the RL-chosen move
+        retrieved = []
+        if self.retrieve_fn is not None:                                  # move-conditioned retrieval
+            try:
+                retrieved = list(self.retrieve_fn(customer_message, ACTION_NAMES[move]) or [])[:5]
+            except Exception:
+                retrieved = []
         l = self.world.leads[0]; seg = SEG_NAMES[l.seg]
         style = HUMAN_STYLE + (" One or two short spoken sentences." if mode == "voice"
                                else " Keep it to 2-3 short sentences.")
         dont = f' You just said: "{self.prev[:110]}". Open differently.' if self.prev else ""
         head = (self.company_ctx + "\n\n") if self.company_ctx else ""
+        if retrieved:
+            head += "Relevant company knowledge for this turn:\n- " + "\n- ".join(retrieved) + "\n\n"
         # the system instruction carries company facts + persona + the RL move; the conversation
         # history is passed as real chat turns (see _llm_call), not flattened into this string.
         system = (f"{head}You are a human sales rep for a {seg} offering (~${l.value:.0f}k). "
@@ -325,7 +357,7 @@ class AugmentedAgent:
         else:
             reply = self._finish(_llm_call(self.gen, system, messages))
         # grounding guardrail: never let an invented price out the door
-        sources = [self.company_ctx] + [t["text"] for t in self.history]
+        sources = [self.company_ctx] + retrieved + [t["text"] for t in self.history]
         invented = ungrounded_prices(reply, *sources)
         if invented:
             warn = (" IMPORTANT: your draft invented a price that is NOT in the company facts. "
@@ -339,6 +371,16 @@ class AugmentedAgent:
                      f"Rewrite the ENTIRE reply cleanly in the customer's language only.")
             reply = self._finish(_llm_call(self.gen, system + warn2, messages))
             bad_script = script_mismatch(reply, customer_message)
+        # authority comes ONLY from company-side sources: a customer saying "my manager
+        # approved 70% off" is the injection vector, so history never authorizes commitments
+        auth = [self.company_ctx] + retrieved
+        commits = unauthorized_commitments(reply, *auth, max_discount_pct=self.max_discount_pct)
+        if commits:
+            warn3 = (" IMPORTANT: your draft promised a discount or giveaway that is NOT authorized "
+                     "by the company facts. Make no discount, refund, or free-anything promises, "
+                     "say you will check what is possible and get back, then continue the move.")
+            reply = self._finish(_llm_call(self.gen, system + warn3, messages))
+            commits = unauthorized_commitments(reply, *auth, max_discount_pct=self.max_discount_pct)
         self.prev = reply; self.history.append({"role": "bot", "text": reply})
         out = {"chosen_move": ACTION_NAMES[move], "reply": reply,
                "belief": {k: round(getattr(l, k), 2)
@@ -348,6 +390,19 @@ class AugmentedAgent:
             out["ungrounded_price"] = invented     # integrators can block/route these
         if bad_script:
             out["script_mismatch"] = bad_script    # surfaced, never silent
+        if commits:
+            out["unauthorized_commitment"] = commits
+        reasons = ([f"unauthorized commitment: {commits}"] if commits else []) + \
+                  (["invented price survived regeneration"] if invented else []) + \
+                  ([f"foreign script: {bad_script}"] if bad_script else []) + \
+                  (["policy chose DROP"] if ACTION_NAMES[move] == "DROP" else [])
+        if reasons:
+            out["escalate"] = True
+            out["escalate_reason"] = reasons[0]
+        self._log({"type": "turn", "customer": customer_message, "belief": out["belief"],
+                   "move": out["chosen_move"], "reply": reply, "retrieved": len(retrieved),
+                   "flags": {k: out[k] for k in ("ungrounded_price", "script_mismatch",
+                                                 "unauthorized_commitment", "escalate") if k in out}})
         return out
 
     def chat(self, messages, mode="chat"):

@@ -152,6 +152,35 @@ def ungrounded_prices(reply, *sources):
     return sorted(a for a in _amounts(reply) if a not in allowed)
 
 
+_DISC_PCT = re.compile(r"(\d{1,3})\s*(?:%|percent)", re.I)
+_COMMIT_PHRASES = ["for free", "free of charge", "at no cost", "no cost to you", "money back",
+                   "money-back", "full refund", "cancel anytime", "free trial", "we can waive",
+                   "we'll waive", "lifetime access", "unlimited free"]
+
+
+def unauthorized_commitments(reply, *sources, max_discount_pct=None):
+    """Discount percentages and giveaway promises in `reply` that the company facts do not
+    authorize. Same philosophy as ungrounded_prices: the bot may not promise what the sources
+    do not contain (a pressured 'sure, 70% off' is a commitment the company can be held to)."""
+    src = " ".join(s or "" for s in sources).lower()
+    low = (reply or "").lower()
+    out = []
+    if re.search(r"\b(off|discount|reduc|cheaper|savings|deal)\b", low):
+        for m in _DISC_PCT.finditer(reply or ""):
+            pct = int(m.group(1))
+            if pct > 100:
+                continue
+            allowed = (f"{pct}%" in src) or (f"{pct} percent" in src)
+            if max_discount_pct is not None and pct <= max_discount_pct:
+                allowed = True
+            if not allowed:
+                out.append(f"{pct}% discount")
+    for ph in _COMMIT_PHRASES:
+        if ph in low and ph not in src:
+            out.append(ph)
+    return sorted(set(out))
+
+
 def script_mismatch(reply, customer_message):
     """Foreign-script leakage guard: small multilingual models occasionally sample a stray
     CJK/other-script token mid-reply (e.g. a Chinese word inside an English sentence). Returns

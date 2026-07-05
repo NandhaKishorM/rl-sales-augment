@@ -18,17 +18,20 @@ fine-tuning are the commercial offering of Convai Innovations Pvt. Ltd.
 """
 from __future__ import annotations
 
-__version__ = "0.6.9"
+__version__ = "0.7.0"
 
 from .world import ACTION_NAMES, SEG_NAMES, SEGMENTS, SalesWorld, SalesConfig
 from .deploy import AugmentedAgent, SalesBot, estimate_state_via, MOVE_INTENT, next_moves
 from . import providers
 from ._env import load_env
+from .retrieval import SimpleRetriever, chunk_text
+from .docs import build_company_ctx
 
 __all__ = [
     "load_agent", "load_gemma_bot", "model_path", "MODEL_PATH", "AugmentedAgent", "SalesBot",
     "estimate_state_via", "MOVE_INTENT", "next_moves", "providers",
-    "ACTION_NAMES", "SEG_NAMES", "SEGMENTS", "SalesWorld", "SalesConfig", "load_env", "__version__",
+    "ACTION_NAMES", "SEG_NAMES", "SEGMENTS", "SalesWorld", "SalesConfig", "load_env",
+    "SimpleRetriever", "chunk_text", "build_company_ctx", "__version__",
 ]
 
 
@@ -42,7 +45,9 @@ MODEL_PATH = model_path()
 
 
 def load_agent(generate_fn, *, company_ctx: str = "", segment=None,
-               rerank_n: int = 1, humanize: bool = True, device: str = "cpu") -> "AugmentedAgent":
+               rerank_n: int = 1, humanize: bool = True, device: str = "cpu",
+               retrieve_fn=None, log_path: str = None, max_discount_pct=None,
+               perceive_fn=None) -> "AugmentedAgent":
     """Load the bundled policy and wrap ANY LLM (`generate_fn: prompt -> str`).
 
     company_ctx : block of your company's facts, injected into every reply prompt.
@@ -51,7 +56,9 @@ def load_agent(generate_fn, *, company_ctx: str = "", segment=None,
     device      : the tiny policy runs fine on 'cpu'.
     """
     return AugmentedAgent(MODEL_PATH, generate_fn, device=device, company_ctx=company_ctx,
-                          segment=segment, rerank_n=rerank_n, humanize=humanize)
+                          segment=segment, rerank_n=rerank_n, humanize=humanize,
+                          retrieve_fn=retrieve_fn, log_path=log_path,
+                          max_discount_pct=max_discount_pct, perceive_fn=perceive_fn)
 
 
 def load_gemma_bot(model: str = "google/gemma-4-E2B-it", *, device: str = None, company_ctx: str = "",
