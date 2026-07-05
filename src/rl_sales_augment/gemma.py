@@ -163,15 +163,6 @@ import re
 # overrides this to greedy). repetition guards stay to avoid loops.
 _GEN_KW = dict(do_sample=True, temperature=0.9, top_p=0.92, repetition_penalty=1.2, no_repeat_ngram_size=3)
 
-# style instruction appended to customer-facing prompts so it sounds like a person, not an AI.
-HUMAN_STYLE = ("Talk like a real person on a live call, not a marketing script: use contractions, "
-               "everyday words and short sentences, and be a little informal and imperfect. NEVER "
-               "use em dashes, bullet points, or buzzwords (leverage, synergy, robust, seamless, "
-               "tailored, elevate). Vary how you open every time, and do NOT reuse the same "
-               "acknowledgment (never keep saying 'I totally get that' or 'yeah, I get that'). "
-               "Don't sound scripted.")
-
-
 def _chat_ids(tokenizer, prompt, device):
     """Apply the instruction-tuned chat template (this is what was missing — a raw
     prompt makes Gemma-it just continue/echo the text). Thinking disabled. Gemma 4 is

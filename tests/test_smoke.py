@@ -24,6 +24,12 @@ def test_constants_and_model():
     assert m2["obs_dim"] == 16 and m2["bridge_aligned"]
     assert rsa.SalesWorld(rsa.SalesConfig(n_leads=1, world_version=2)).obs_dim == 16
     assert callable(rsa.providers.hf_chat)
+    # RL-not-prompt-engineering: distilled bundles run a NEUTRAL prompt (no persona words)
+    from rl_sales_augment.deploy import _style_block
+    neutral = _style_block("chat", True)
+    assert "person" not in neutral and "contraction" not in neutral.lower() and "sentences" in neutral
+    assert "real person" in _style_block("chat", False)     # E2B/API paths keep the persona
+    assert m["imperfection_distilled"] and not m2.get("imperfection_distilled")
 
 
 def test_load_and_reply():

@@ -300,7 +300,10 @@ out = bot.reply("we keep getting random crashes")
 > Since v0.8.0 the bundled bridge is aligned to **E4B** on the chaotic world (move-probe alignment
 > + imperfect-human self-distillation, Gemma frozen throughout): with a NEUTRAL prompt, the injected
 > latent alone lifts move-probe accuracy **35% → 99.8%** and reply-executes-move **23% → 61.5%**,
-> with zero degeneration, and carries the distilled human voice. Earlier E2B alignment for
+> with zero degeneration, and carries the distilled human voice. **On E4B the serve prompt is
+> therefore NEUTRAL: no persona, no style instructions, only a length cap. The LLM talks like a
+> human because of the RL latent, not prompt engineering** (the E2B path and all API-model paths
+> keep the persona prompt, since no latent reaches those models). Earlier E2B alignment for
 > reference: reply-executes-move **19% → 49%** on the
 > training eval and **0% → 58%** in an independent local check, with fluency unchanged. Honest
 > framing: the latent is a lossy, complementary channel; prompt-level move injection (route 1 and

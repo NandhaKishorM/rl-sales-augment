@@ -60,6 +60,9 @@ rsa.providers.openai_chat(base_url="http://...")              # any OpenAI-compa
 
 Or bring your own: any `gen(prompt) -> str` works.
 
+On the Gemma E4B injection path the prompt is NEUTRAL (no persona, no style words): the human
+voice comes from the RL latent itself, not prompt engineering.
+
 **Multilingual:** the bot replies in the customer's language automatically (tested: Malayalam,
 Hindi, Tamil, Japanese, Spanish, German; a built-in script detector keeps even small local models
 on-language for Indic/CJK/Arabic/Cyrillic scripts). Romanized Indic is supported too: Manglish /

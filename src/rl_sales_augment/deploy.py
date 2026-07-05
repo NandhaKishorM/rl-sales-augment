@@ -129,9 +129,19 @@ def estimate_state(gemma_lm, tok, history, device="cuda"):
 
 
 # ----------------------------------------------------- real-time customer bot
+def _style_block(mode, neutral_style):
+    """The E4B/v3 injection path runs NEUTRAL: no persona, no tone words, only a length cap.
+    The human voice must arrive through the RL latent, that is the claim being proven. Bundles
+    without a voice-carrying latent (E2B/v2) keep the persona prompt."""
+    length = ("Just one or two short spoken sentences." if mode == "voice"
+              else "Keep it to 2-3 short sentences.")
+    return length if neutral_style else HUMAN_STYLE + " " + length
+
+
 def bot_reply(agent, featurizer, gemma_lm, tok, bridge, world, deal_idx,
               customer_message, mode="chat", device="cuda", company_ctx="", temperature=None,
-              style_reward=None, gemma_feat=None, n_candidates=1, avoid="", history_text=""):
+              style_reward=None, gemma_feat=None, n_candidates=1, avoid="", history_text="",
+              neutral_style=False):
     """Generate the bot's next customer-facing message for one live deal: RL-chosen strategy
     injected into Gemma, company facts + conversation history grounding the words, and (if a
     style_reward + gemma_feat are given and n_candidates>1) best-of-N reranking for authenticity.
@@ -140,8 +150,7 @@ def bot_reply(agent, featurizer, gemma_lm, tok, bridge, world, deal_idx,
     move = actions[deal_idx]
     l = world.leads[deal_idx]
     seg = SEG_NAMES[l.seg]
-    style = ((HUMAN_STYLE + " Just one or two short spoken sentences.") if mode == "voice"
-             else (HUMAN_STYLE + " Keep it to 2-3 short sentences."))
+    style = _style_block(mode, neutral_style)
     dont = f' You just said: "{avoid[:110]}". Open differently this time.' if avoid else ""
     header = (company_ctx + "\n\n") if company_ctx else ""
     convo = (f"Conversation so far:\n{history_text}\n\n" if history_text else "")
@@ -229,6 +238,9 @@ class SalesBot:
         self.device, self.company_ctx, self.n_candidates, self.perceive = device, company_ctx, n_candidates, perceive
         self._seg = segment
         self._world_version = 3 if m["obs_dim"] >= 22 else 2   # bundle decides its obs layout
+        # imperfection-distilled bundles (v3/E4B) declare that the latent carries the human
+        # voice, so their prompts stay NEUTRAL: RL, not prompt engineering, does the talking.
+        self.neutral_style = bool(m.get("imperfection_distilled"))
         self.new_conversation(segment)
 
     def new_conversation(self, segment=None):
@@ -248,7 +260,8 @@ class SalesBot:
         out = bot_reply(self.agent, self.feat, self.gemma_lm, self.tok, self.bridge, self.world, 0,
                         customer_message, mode=mode, device=self.device, company_ctx=self.company_ctx,
                         style_reward=self.style_reward, gemma_feat=self.gemma_feat,
-                        n_candidates=self.n_candidates, avoid=self.prev, history_text=prior)
+                        n_candidates=self.n_candidates, avoid=self.prev, history_text=prior,
+                        neutral_style=self.neutral_style)
         self.prev = out["reply"]
         self.history.append({"role": "bot", "text": out["reply"]})
         out["estimated_state"] = {k: round(getattr(self.world.leads[0], k), 2)
